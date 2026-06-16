@@ -1,8 +1,11 @@
 import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import ModelSettingsModal from '../features/settings/ModelSettingsModal.jsx';
 
 export default function Shell({ children }) {
   const { user, logout } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <main className="app-shell">
@@ -14,12 +17,14 @@ export default function Shell({ children }) {
         <nav className="top-actions">
           <NavLink className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to="/chat">对话管理</NavLink>
           <NavLink className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to="/knowledge">知识库管理</NavLink>
+          <button className="tab" onClick={() => setSettingsOpen(true)}>系统设置</button>
           <span className="avatar">👤</span>
           <span>{user?.displayName || '张医生'}</span>
           <button className="ghost" onClick={logout}>退出</button>
         </nav>
       </header>
       {children}
+      <ModelSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </main>
   );
 }

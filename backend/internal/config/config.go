@@ -28,6 +28,7 @@ type Config struct {
 }
 
 func Load() Config {
+	volcengineAPIKey := os.Getenv("VOLCENGINE_API_KEY")
 	return Config{
 		HTTPAddr:               getenv("HTTP_ADDR", ":8080"),
 		JWTSecret:              getenv("JWT_SECRET", "local-dev-change-me"),
@@ -38,12 +39,12 @@ func Load() Config {
 		MaxUploadBytes:         int64(getenvInt("MAX_UPLOAD_MB", 50)) * 1024 * 1024,
 		QdrantURL:              strings.TrimRight(getenv("QDRANT_URL", "http://localhost:6333"), "/"),
 		QdrantCollection:       getenv("QDRANT_COLLECTION", "medical_agent_chunks"),
-		DeepSeekBaseURL:        strings.TrimRight(getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"), "/"),
-		DeepSeekAPIKey:         os.Getenv("DEEPSEEK_API_KEY"),
-		DeepSeekChatModel:      getenv("DEEPSEEK_CHAT_MODEL", "deepseek-v4-flash"),
-		QwenEmbeddingBaseURL:   strings.TrimRight(getenv("QWEN_EMBEDDING_BASE_URL", ""), "/"),
-		QwenEmbeddingAPIKey:    os.Getenv("QWEN_EMBEDDING_API_KEY"),
-		QwenEmbeddingModel:     getenv("QWEN_EMBEDDING_MODEL", "Qwen3-Embedding"),
+		DeepSeekBaseURL:        strings.TrimRight(getenv("DEEPSEEK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), "/"),
+		DeepSeekAPIKey:         getenv("DEEPSEEK_API_KEY", volcengineAPIKey),
+		DeepSeekChatModel:      getenv("DEEPSEEK_CHAT_MODEL", "DeepSeek-V4-flash"),
+		QwenEmbeddingBaseURL:   strings.TrimRight(getenv("QWEN_EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), "/"),
+		QwenEmbeddingAPIKey:    getenv("QWEN_EMBEDDING_API_KEY", volcengineAPIKey),
+		QwenEmbeddingModel:     getenv("QWEN_EMBEDDING_MODEL", "doubao-embedding-vision-251215"),
 		QwenEmbeddingDimension: getenvInt("QWEN_EMBEDDING_DIMENSION", 1024),
 		RetrievalTopK:          getenvInt("RETRIEVAL_TOP_K", 5),
 	}

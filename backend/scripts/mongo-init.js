@@ -48,3 +48,41 @@ db.audit_logs.createIndex({ actorId: 1, createdAt: -1 });
 db.audit_logs.createIndex({ action: 1 });
 
 db.model_configs.createIndex({ updatedAt: -1 });
+db.model_configs.createIndex({ deepSeekChatModel: 1 });
+db.model_configs.createIndex({ qwenEmbeddingModel: 1 });
+
+db.model_configs.updateOne(
+  {},
+  {
+    $setOnInsert: {
+      deepSeekBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      deepSeekChatModel: "DeepSeek-V4-flash",
+      qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      qwenEmbeddingModel: "doubao-embedding-vision-251215",
+      qwenEmbeddingDimension: 1024,
+      updatedAt: new Date()
+    }
+  },
+  { upsert: true }
+);
+
+db.model_configs.updateMany(
+  {
+    $or: [
+      { deepSeekBaseUrl: { $in: [null, "", "https://api.deepseek.com"] } },
+      { deepSeekChatModel: { $in: [null, "", "deepseek-v4-flash"] } },
+      { qwenEmbeddingBaseUrl: { $in: [null, "", "https://dashscope.aliyuncs.com/compatible-mode/v1"] } },
+      { qwenEmbeddingModel: { $in: [null, "", "Qwen3-Embedding"] } }
+    ]
+  },
+  {
+    $set: {
+      deepSeekBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      deepSeekChatModel: "DeepSeek-V4-flash",
+      qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+      qwenEmbeddingModel: "doubao-embedding-vision-251215",
+      qwenEmbeddingDimension: 1024,
+      updatedAt: new Date()
+    }
+  }
+);

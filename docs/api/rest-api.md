@@ -62,6 +62,28 @@ Authorization: Bearer <token>
 
 退出当前会话。
 
+## 系统设置
+
+### GET `/system/model-config`
+
+返回当前模型配置。API Key 只返回是否已配置和脱敏预览，不返回明文。
+
+### PATCH `/system/model-config`
+
+保存模型配置到 MongoDB。`deepSeekAPIKey` 或 `qwenEmbeddingAPIKey` 留空时保留已保存密钥。
+
+```json
+{
+  "deepSeekBaseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+  "deepSeekAPIKey": "sk-...",
+  "deepSeekChatModel": "DeepSeek-V4-flash",
+  "qwenEmbeddingBaseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+  "qwenEmbeddingAPIKey": "sk-...",
+  "qwenEmbeddingModel": "doubao-embedding-vision-251215",
+  "qwenEmbeddingDimension": 1024
+}
+```
+
 ## 知识库
 
 ### GET `/knowledge-bases`

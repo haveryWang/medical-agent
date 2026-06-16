@@ -19,7 +19,7 @@ This document records the implemented architecture for the medical knowledge-bas
 - Backend: Go with chi router and chi middleware.
 - Source-of-truth database: MongoDB.
 - Vector database: Qdrant by default, behind a vector-store interface.
-- Model providers: DeepSeek for chat generation and Qwen3-Embedding for vector generation, configured through backend environment variables.
+- Model providers: DeepSeek for chat generation and Qwen3-Embedding for vector generation, configured from MongoDB model settings with environment variables as bootstrap fallback.
 
 ## Module Map
 
@@ -48,11 +48,11 @@ backend/
 
 ## Storage Responsibilities
 
-MongoDB stores users, sessions, roles, conversations, messages, knowledge bases, document metadata, chunks, ingestion jobs, audit logs, and non-secret model configuration.
+MongoDB stores users, sessions, roles, conversations, messages, knowledge bases, document metadata, chunks, ingestion jobs, audit logs, and model configuration.
 
 Qdrant stores embedding vectors and searchable payload fields. MongoDB remains canonical for source text, metadata, permissions, and audit records.
 
-Secrets such as `DEEPSEEK_API_KEY` and `QWEN_EMBEDDING_API_KEY` are runtime configuration and must not be stored in source code or returned to the frontend. The embedding model configuration is kept separate from DeepSeek chat configuration.
+Secrets such as `DEEPSEEK_API_KEY` and `QWEN_EMBEDDING_API_KEY` must not be stored in source code or returned to the frontend. Operators can save provider API keys and model names through the system settings modal; backend ingestion and chat execution reads the effective values from MongoDB and falls back to environment variables when no database value exists.
 
 ## Design Source
 

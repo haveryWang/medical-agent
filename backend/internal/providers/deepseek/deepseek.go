@@ -13,11 +13,13 @@ import (
 	"time"
 
 	"medical-agent/backend/internal/config"
+	"medical-agent/backend/internal/models"
 )
 
 type Client struct {
-	cfg        config.Config
-	httpClient *http.Client
+	cfg           config.Config
+	httpClient    *http.Client
+	modelResolver func(context.Context) models.ModelConfig
 }
 
 type Message struct {
@@ -31,37 +33,67 @@ type chatRequest struct {
 	Stream   bool      `json:"stream"`
 }
 
-func New(cfg config.Config) *Client {
-	return &Client{
+func New(cfg config.Config, options ...func(*Client)) *Client {
+	client := &Client{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 120 * time.Second},
 	}
+	for _, option := range options {
+		option(client)
+	}
+	return client
 }
 
-func (c *Client) Configured() bool {
-	return c.cfg.DeepSeekAPIKey != "" && c.cfg.DeepSeekBaseURL != "" && c.cfg.DeepSeekChatModel != ""
+func WithModelConfigResolver(resolver func(context.Context) models.ModelConfig) func(*Client) {
+	return func(client *Client) {
+		client.modelResolver = resolver
+	}
+}
+
+func (c *Client) resolveConfig(ctx context.Context) config.Config {
+	cfg := c.cfg
+	if c.modelResolver == nil {
+		return cfg
+	}
+	model := c.modelResolver(ctx)
+	if strings.TrimSpace(model.DeepSeekBaseURL) != "" {
+		cfg.DeepSeekBaseURL = model.DeepSeekBaseURL
+	}
+	if strings.TrimSpace(model.DeepSeekAPIKey) != "" {
+		cfg.DeepSeekAPIKey = model.DeepSeekAPIKey
+	}
+	if strings.TrimSpace(model.DeepSeekChatModel) != "" {
+		cfg.DeepSeekChatModel = model.DeepSeekChatModel
+	}
+	return cfg
+}
+
+func (c *Client) Configured(ctx context.Context) bool {
+	cfg := c.resolveConfig(ctx)
+	return cfg.DeepSeekAPIKey != "" && cfg.DeepSeekBaseURL != "" && cfg.DeepSeekChatModel != ""
 }
 
 func (c *Client) Health(ctx context.Context) error {
-	if !c.Configured() {
+	if !c.Configured(ctx) {
 		return errors.New("DeepSeek 未配置，需设置 DEEPSEEK_API_KEY")
 	}
 	return nil
 }
 
 func (c *Client) StreamChat(ctx context.Context, messages []Message, onDelta func(string) error) error {
-	if !c.Configured() {
+	cfg := c.resolveConfig(ctx)
+	if cfg.DeepSeekAPIKey == "" || cfg.DeepSeekBaseURL == "" || cfg.DeepSeekChatModel == "" {
 		return c.localStream(ctx, messages, onDelta)
 	}
-	payload, err := json.Marshal(chatRequest{Model: c.cfg.DeepSeekChatModel, Messages: messages, Stream: true})
+	payload, err := json.Marshal(chatRequest{Model: cfg.DeepSeekChatModel, Messages: messages, Stream: true})
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.DeepSeekBaseURL+"/chat/completions", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.DeepSeekBaseURL+"/chat/completions", bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.cfg.DeepSeekAPIKey)
+	req.Header.Set("Authorization", "Bearer "+cfg.DeepSeekAPIKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	res, err := c.httpClient.Do(req)

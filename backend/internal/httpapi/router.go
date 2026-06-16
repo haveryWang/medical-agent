@@ -31,6 +31,9 @@ func (api *API) Router() http.Handler {
 			r.Post("/auth/logout", api.logout)
 			r.Get("/auth/me", api.me)
 
+			r.With(api.requirePermission("system:read")).Get("/system/model-config", api.getModelConfig)
+			r.With(api.requirePermission("system:read")).Patch("/system/model-config", api.saveModelConfig)
+
 			r.Get("/knowledge-bases", api.listKnowledgeBases)
 			r.With(api.requirePermission("knowledge:write")).Post("/knowledge-bases", api.createKnowledgeBase)
 			r.With(api.requirePermission("knowledge:write")).Patch("/knowledge-bases/{id}", api.updateKnowledgeBase)

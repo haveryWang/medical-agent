@@ -54,6 +54,8 @@ export function createApiClient({ getToken, onUnauthorized } = {}) {
     createConversation: (payload) => request('/conversations', { method: 'POST', body: JSON.stringify(payload) }),
     listMessages: (id) => request(`/conversations/${id}/messages`),
     messageDetails: (id) => request(`/messages/${id}/details`),
+    getModelConfig: () => request('/system/model-config'),
+    saveModelConfig: (payload) => request('/system/model-config', { method: 'PATCH', body: JSON.stringify(payload) }),
     streamConversationMessage,
   };
 }

@@ -51,6 +51,10 @@ func NewMongoStore(ctx context.Context, cfg config.Config) (*MongoStore, error) 
 		_ = client.Disconnect(ctx)
 		return nil, err
 	}
+	if err := store.EnsureModelConfig(ctx, cfg); err != nil {
+		_ = client.Disconnect(ctx)
+		return nil, err
+	}
 	if err := store.Seed(ctx); err != nil {
 		_ = client.Disconnect(ctx)
 		return nil, err
@@ -114,6 +118,8 @@ func (s *MongoStore) EnsureIndexes(ctx context.Context) error {
 		},
 		"model_configs": {
 			{Keys: bson.D{{Key: "updatedAt", Value: -1}}},
+			{Keys: bson.D{{Key: "deepSeekChatModel", Value: 1}}},
+			{Keys: bson.D{{Key: "qwenEmbeddingModel", Value: 1}}},
 		},
 	}
 	for collection, models := range indexes {

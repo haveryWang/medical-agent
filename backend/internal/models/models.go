@@ -128,8 +128,10 @@ type AuditLog struct {
 type ModelConfig struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	DeepSeekBaseURL        string             `bson:"deepSeekBaseUrl" json:"deepSeekBaseUrl"`
+	DeepSeekAPIKey         string             `bson:"deepSeekAPIKey,omitempty" json:"deepSeekAPIKey,omitempty"`
 	DeepSeekChatModel      string             `bson:"deepSeekChatModel" json:"deepSeekChatModel"`
 	QwenEmbeddingBaseURL   string             `bson:"qwenEmbeddingBaseUrl" json:"qwenEmbeddingBaseUrl"`
+	QwenEmbeddingAPIKey    string             `bson:"qwenEmbeddingAPIKey,omitempty" json:"qwenEmbeddingAPIKey,omitempty"`
 	QwenEmbeddingModel     string             `bson:"qwenEmbeddingModel" json:"qwenEmbeddingModel"`
 	QwenEmbeddingDimension int                `bson:"qwenEmbeddingDimension" json:"qwenEmbeddingDimension"`
 	UpdatedAt              time.Time          `bson:"updatedAt" json:"updatedAt"`
