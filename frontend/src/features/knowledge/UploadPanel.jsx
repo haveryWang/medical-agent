@@ -1,14 +1,39 @@
+import { useRef } from 'react';
 import { App, Button, Empty, Popconfirm, Space, Spin, Tag, Tooltip, Typography, Upload } from 'antd';
 import { DeleteOutlined, DownloadOutlined, FileSearchOutlined, FileTextOutlined, InboxOutlined, PartitionOutlined } from '@ant-design/icons';
 import { formatDateTime, formatSize } from '../../utils/format.js';
+import { ACCEPTED_UPLOAD_TYPES, prepareUploadBatch } from './uploadBatch.js';
 
-const MAX_KB_FILE_BYTES = 15 * 1024 * 1024;
-const TOO_LARGE_MESSAGE = '单个知识库文件不能超过 15MB，请切割单文件尺寸后再上传';
-const SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.xlsx', '.xls', '.md', '.markdown', '.txt', '.csv'];
-const ACCEPTED_UPLOAD_TYPES = SUPPORTED_EXTENSIONS.join(',');
-
-export default function UploadPanel({ documents, loading, selected, uploading, onDelete, onDownload, onUpload, onViewChunks, onViewDocument }) {
+export default function UploadPanel({
+  documents,
+  loading,
+  selected,
+  uploadQueue = [],
+  uploading,
+  onDelete,
+  onDownload,
+  onUpload,
+  onViewChunks,
+  onViewDocument,
+}) {
   const { message } = App.useApp();
+  const uploadTimer = useRef(null);
+
+  function scheduleUpload(fileList) {
+    window.clearTimeout(uploadTimer.current);
+    uploadTimer.current = window.setTimeout(async () => {
+      const { validFiles, errors } = prepareUploadBatch(fileList);
+      errors.forEach(({ file, message: errorMessage }) => {
+        message.error(`${file?.name || '文件'}：${errorMessage}`);
+      });
+      if (!validFiles.length) return;
+      try {
+        await onUpload(validFiles);
+      } catch {
+        // useKnowledgeWorkspace 已经统一 toast，这里只负责阻止 Upload 默认错误弹层重复出现。
+      }
+    }, 0);
+  }
 
   return (
     <aside className="document-panel">
@@ -18,39 +43,26 @@ export default function UploadPanel({ documents, loading, selected, uploading, o
       </header>
       <Upload.Dragger
         name="file"
-        multiple={false}
+        multiple
         accept={ACCEPTED_UPLOAD_TYPES}
         showUploadList={false}
         disabled={!selected || uploading}
-        beforeUpload={(file) => {
-          if (file.size > MAX_KB_FILE_BYTES) {
-            message.error(TOO_LARGE_MESSAGE);
-            return Upload.LIST_IGNORE;
-          }
-          const ext = getFileExtension(file.name);
-          if (ext === '.doc') {
-            message.error('当前支持 Word .docx 文件，.doc 请先转换为 .docx 后上传');
-            return Upload.LIST_IGNORE;
-          }
-          if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-            message.error('当前支持 PDF、Word(.docx)、Excel(.xlsx/.xls)、Markdown、TXT、CSV');
-            return Upload.LIST_IGNORE;
-          }
-          return true;
-        }}
-        customRequest={async ({ file, onError, onSuccess }) => {
-          try {
-            await onUpload(file);
-            onSuccess?.({});
-          } catch (err) {
-            onError?.(err);
-          }
+        beforeUpload={(_, fileList) => {
+          scheduleUpload(fileList);
+          return Upload.LIST_IGNORE;
         }}
       >
         <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-        <p className="ant-upload-text">{uploading ? '上传中...' : '点击或拖拽文件上传'}</p>
-        <p className="ant-upload-hint">支持 PDF、Word(.docx)、Excel(.xlsx/.xls)、Markdown、TXT、CSV，单个文件 15MB 以内，原始文件会保存到数据库并进入预处理与向量入库流程。</p>
+        <p className="ant-upload-text">{uploading ? `正在上传 ${uploadQueue.length || ''} 个文件` : '点击或拖拽文件批量上传'}</p>
+        <p className="ant-upload-hint">支持 PDF、Word(.docx)、Excel(.xlsx/.xls)、Markdown、TXT、CSV，单个文件 15MB 以内</p>
       </Upload.Dragger>
+      {uploading && uploadQueue.length ? (
+        <div className="upload-queue">
+          {uploadQueue.map((name, index) => (
+            <Tag key={`${name}-${index}`}>{name}</Tag>
+          ))}
+        </div>
+      ) : null}
       <div className="document-list">
         {loading ? (
           <div className="loading-state"><Spin /></div>
@@ -99,11 +111,6 @@ export default function UploadPanel({ documents, loading, selected, uploading, o
       </div>
     </aside>
   );
-}
-
-function getFileExtension(name = '') {
-  const index = name.lastIndexOf('.');
-  return index >= 0 ? name.slice(index).toLowerCase() : '';
 }
 
 function docStatusColor(status) {

@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 const defaults = {
   deepSeekBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
   deepSeekAPIKey: '',
-  deepSeekChatModel: 'DeepSeek-V4-flash',
+  deepSeekChatModel: 'deepseek-v4-flash-260425',
   qwenEmbeddingBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
   qwenEmbeddingAPIKey: '',
   qwenEmbeddingModel: 'doubao-embedding-vision-251215',
@@ -91,7 +91,7 @@ export default function ModelSettingsModal({ open, onClose }) {
             <Input placeholder="https://ark.cn-beijing.volces.com/api/v3" />
           </Form.Item>
           <Form.Item name="deepSeekChatModel" label="对话模型" rules={[{ required: true, message: '请输入对话模型' }]}>
-            <Input placeholder="DeepSeek-V4-flash" />
+            <Input placeholder="deepseek-v4-flash-260425" />
           </Form.Item>
           <Form.Item name="deepSeekAPIKey" label="对话 API Key" className="settings-form-full">
             <Input.Password placeholder="留空则保留已保存密钥" autoComplete="off" />

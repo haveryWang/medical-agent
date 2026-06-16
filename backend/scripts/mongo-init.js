@@ -56,7 +56,7 @@ db.model_configs.updateOne(
   {
     $setOnInsert: {
       deepSeekBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-      deepSeekChatModel: "DeepSeek-V4-flash",
+      deepSeekChatModel: "deepseek-v4-flash-260425",
       qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
       qwenEmbeddingModel: "doubao-embedding-vision-251215",
       qwenEmbeddingDimension: 2048,
@@ -78,7 +78,7 @@ db.model_configs.updateMany(
   {
     $set: {
       deepSeekBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
-      deepSeekChatModel: "DeepSeek-V4-flash",
+      deepSeekChatModel: "deepseek-v4-flash-260425",
       qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
       qwenEmbeddingModel: "doubao-embedding-vision-251215",
       qwenEmbeddingDimension: 2048,

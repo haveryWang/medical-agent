@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { App, Button, Dropdown, Empty, Input, Modal, Select, Space, Tag, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined, MoreOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { formatDateTime } from '../../utils/format.js';
+import { conversationScopeText, scopeHint } from './knowledgeScope.js';
 
 export default function ConversationList({
   active,
@@ -16,7 +17,7 @@ export default function ConversationList({
   onOpen,
   onRename,
   onSearch,
-  selectedKnowledgeBaseId,
+  selectedKnowledgeBaseIds,
   serviceStatus,
 }) {
   const { modal } = App.useApp();
@@ -63,11 +64,13 @@ export default function ConversationList({
       <div className="retrieval-scope">
         <Typography.Text strong>知识库</Typography.Text>
         <Select
+          mode="multiple"
           allowClear
           showSearch
-          value={selectedKnowledgeBaseId || undefined}
+          value={selectedKnowledgeBaseIds}
           placeholder="不选则关闭知识库"
           optionFilterProp="label"
+          maxTagCount="responsive"
           disabled={!activeKnowledgeBases.length}
           onChange={onKnowledgeBaseChange}
           options={activeKnowledgeBases.map((kb) => ({
@@ -94,7 +97,7 @@ export default function ConversationList({
           }}
         />
         <Typography.Text type="secondary" className="scope-hint">
-          {scopeHint(active, selectedKnowledgeBaseId, knowledgeBaseMap)}
+          {scopeHint(active, selectedKnowledgeBaseIds, knowledgeBaseMap)}
         </Typography.Text>
         {activeKnowledgeBases.length === 0 ? <Tag color="warning">暂无可用知识库</Tag> : null}
       </div>
@@ -155,20 +158,6 @@ export default function ConversationList({
       <ServiceStatus status={serviceStatus} />
     </aside>
   );
-}
-
-function scopeHint(active, selectedId, knowledgeBaseMap) {
-  if (!selectedId) {
-    return active ? '当前未选择知识库，发送时不走检索增强' : '未选择知识库，发送首条消息时不走检索增强';
-  }
-  const name = knowledgeBaseMap.get(String(selectedId))?.name || '当前知识库';
-  return active ? `当前知识库：${name}` : `已选知识库：${name}，发送首条消息时生效`;
-}
-
-function conversationScopeText(knowledgeBaseIds = [], knowledgeBaseMap) {
-  const id = knowledgeBaseIds.find((item) => knowledgeBaseMap.has(String(item)));
-  if (!id) return '未选择知识库';
-  return `知识库：${knowledgeBaseMap.get(String(id))?.name || '未知知识库'}`;
 }
 
 function ServiceStatus({ status }) {

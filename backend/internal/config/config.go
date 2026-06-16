@@ -46,7 +46,7 @@ func Load() Config {
 		QdrantCollection:       getenv("QDRANT_COLLECTION", "medical_agent_chunks"),
 		DeepSeekBaseURL:        strings.TrimRight(getenv("DEEPSEEK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), "/"),
 		DeepSeekAPIKey:         getenv("DEEPSEEK_API_KEY", volcengineAPIKey),
-		DeepSeekChatModel:      getenv("DEEPSEEK_CHAT_MODEL", "DeepSeek-V4-flash"),
+		DeepSeekChatModel:      getenv("DEEPSEEK_CHAT_MODEL", "deepseek-v4-flash-260425"),
 		QwenEmbeddingBaseURL:   strings.TrimRight(getenv("QWEN_EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), "/"),
 		QwenEmbeddingAPIKey:    getenv("QWEN_EMBEDDING_API_KEY", volcengineAPIKey),
 		QwenEmbeddingModel:     getenv("QWEN_EMBEDDING_MODEL", DefaultQwenEmbeddingModel),

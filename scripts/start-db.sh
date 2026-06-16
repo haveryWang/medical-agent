@@ -5,6 +5,8 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib.sh"
 
+ensure_docker
+
 log "启动 MongoDB 和 Qdrant"
 (cd "$ROOT_DIR" && docker compose up -d mongodb qdrant)
 

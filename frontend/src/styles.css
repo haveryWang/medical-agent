@@ -521,6 +521,19 @@ a { color: inherit; }
   margin-bottom: 18px;
 }
 
+.upload-queue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -8px 0 14px;
+}
+
+.upload-queue .ant-tag {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .document-list {
   margin-top: 8px;
 }

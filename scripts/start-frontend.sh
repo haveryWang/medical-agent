@@ -6,6 +6,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/lib.sh"
 
 ensure_frontend_env
+ensure_npm
 
 if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
   log "安装前端依赖"

@@ -6,36 +6,41 @@ import (
 )
 
 func TestChunkDocumentSplitsByHeadingAndParagraphUnderLimit(t *testing.T) {
-	longParagraph := strings.Repeat("糖尿病患者需要评估血糖血压血脂并结合并发症风险制定随访计划。", 8)
 	text := "总则\n" +
-		"第一段强调建立个人健康档案并完成初始评估。\n\n" +
-		longParagraph + "\n\n" +
-		"诊疗建议\n" +
-		"根据病情分层选择生活方式干预、药物治疗和复诊频率。"
+		strings.Repeat("甲", 59) + "。" +
+		strings.Repeat("乙", 59) + "！" +
+		strings.Repeat("丙", 59) + "？" +
+		strings.Repeat("丁", 59) + "。"
 
-	chunks := chunkDocument(text, 200)
+	chunks := chunkDocument(text, "诊疗规范.pdf", 200)
 
-	if len(chunks) < 4 {
-		t.Fatalf("expected heading and paragraph aware chunks, got %#v", chunks)
+	if len(chunks) != 2 {
+		t.Fatalf("expected sentence aware chunks, got %#v", chunks)
+	}
+	if got := len([]rune(chunks[0].Text)); got != 180 {
+		t.Fatalf("first chunk has %d runes, want 180", got)
+	}
+	if got := len([]rune(chunks[1].Text)); got != 60 {
+		t.Fatalf("second chunk has %d runes, want 60", got)
+	}
+	if !strings.HasSuffix(chunks[0].Text, "？") {
+		t.Fatalf("expected first chunk to end on a sentence boundary, got %q", chunks[0].Text)
+	}
+	if !strings.HasPrefix(chunks[1].Text, "丁") {
+		t.Fatalf("expected second chunk to start with the next full sentence, got %q", chunks[1].Text)
 	}
 	for _, chunk := range chunks {
-		if got := len([]rune(chunk.Text)); got > 200 {
-			t.Fatalf("chunk %q has %d runes, want <= 200", chunk.Text, got)
+		if got := len([]rune(chunk.Text)); got > 500 {
+			t.Fatalf("chunk %q has %d runes, want <= 500", chunk.Text, got)
 		}
-		if strings.Contains(chunk.Text, "第一段强调") && chunk.Section != "总则" {
-			t.Fatalf("expected first paragraph section 总则, got %q", chunk.Section)
+		if chunk.Section != "总则" {
+			t.Fatalf("expected section 总则, got %q", chunk.Section)
 		}
-		if strings.Contains(chunk.Text, "根据病情分层") && chunk.Section != "诊疗建议" {
-			t.Fatalf("expected treatment paragraph section 诊疗建议, got %q", chunk.Section)
-		}
-	}
-	if strings.Contains(chunks[0].Text, "诊疗建议") {
-		t.Fatalf("expected chunks to split before next heading, got %q", chunks[0].Text)
 	}
 }
 
 func TestChunkDocumentKeepsShortRowsUnderExplicitSection(t *testing.T) {
-	chunks := chunkDocument("工作表: 门诊\n项目 结果\n血压 120/80\n血糖 6.1", 200)
+	chunks := chunkDocument("工作表: 门诊\n项目 结果\n血压 120/80\n血糖 6.1", "门诊数据.xlsx", 200)
 
 	if len(chunks) != 1 {
 		t.Fatalf("expected short rows to stay in one paragraph chunk, got %#v", chunks)
@@ -47,5 +52,30 @@ func TestChunkDocumentKeepsShortRowsUnderExplicitSection(t *testing.T) {
 		if !strings.Contains(chunks[0].Text, wanted) {
 			t.Fatalf("expected chunk to contain %q, got %q", wanted, chunks[0].Text)
 		}
+	}
+}
+
+func TestChunkDocumentCapsVeryLongSentenceAtHardLimit(t *testing.T) {
+	chunks := chunkDocument(strings.Repeat("长", 620)+"。"+"短句。", "长文档.txt", 200)
+
+	if len(chunks) != 3 {
+		t.Fatalf("expected long sentence to be capped and trailing sentence kept, got %#v", chunks)
+	}
+	for _, chunk := range chunks {
+		if chunk.Section != "长文档" {
+			t.Fatalf("expected section 长文档, got %q", chunk.Section)
+		}
+		if got := len([]rune(chunk.Text)); got > 500 {
+			t.Fatalf("chunk has %d runes, want <= 500", got)
+		}
+	}
+	if got := len([]rune(chunks[0].Text)); got != 500 {
+		t.Fatalf("first long-sentence chunk has %d runes, want 500", got)
+	}
+	if !strings.HasSuffix(chunks[1].Text, "。") {
+		t.Fatalf("expected remainder to preserve sentence punctuation, got %q", chunks[1].Text)
+	}
+	if chunks[2].Text != "短句。" {
+		t.Fatalf("expected trailing sentence to remain intact, got %q", chunks[2].Text)
 	}
 }

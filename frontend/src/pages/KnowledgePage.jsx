@@ -51,6 +51,7 @@ export default function KnowledgePage() {
           documents={knowledge.documents}
           loading={knowledge.documentsLoading}
           selected={knowledge.selected}
+          uploadQueue={knowledge.uploadQueue}
           uploading={knowledge.uploading}
           onDelete={knowledge.deleteDocument}
           onDownload={knowledge.downloadDocument}

@@ -27,6 +27,11 @@ type chunkPart struct {
 	Text    string
 }
 
+const (
+	defaultChunkTargetRunes = 200
+	hardChunkMaxRunes       = 500
+)
+
 var headingLineRe = regexp.MustCompile(`^(?:\s{0,3}(?:#{1,6}\s+|[\p{Han}A-Za-z0-9]{1,30}[:：]\s*))(.+?)\s*$`)
 
 func NewWorker(store *store.MongoStore, qwen *qwen.Client, vector *vector.Client) *Worker {
@@ -54,7 +59,7 @@ func (w *Worker) process(ctx context.Context, job models.IngestionJob) {
 		_ = w.store.FailJob(ctx, job, err.Error())
 		return
 	}
-	parts := chunkDocument(text, 200)
+	parts := chunkDocument(text, doc.FileName, 200)
 	vectors, err := w.qwen.Embed(ctx, chunkTexts(parts))
 	if err != nil {
 		_ = w.store.FailJob(ctx, job, err.Error())
@@ -101,7 +106,7 @@ func (w *Worker) process(ctx context.Context, job models.IngestionJob) {
 	}
 }
 
-func chunkDocument(text string, maxLen int) []chunkPart {
+func chunkDocument(text, documentTitle string, maxLen int) []chunkPart {
 	text = normalizeChunkSource(text)
 	if text == "" {
 		return []chunkPart{{Section: "空文档", Text: "空文档"}}
@@ -109,7 +114,7 @@ func chunkDocument(text string, maxLen int) []chunkPart {
 
 	lines := strings.Split(text, "\n")
 	sections := make([]chunkPart, 0)
-	currentSection := "正文"
+	currentSection := documentSectionTitle(documentTitle)
 	var paragraph strings.Builder
 
 	flushParagraph := func() {
@@ -155,7 +160,10 @@ func chunkTexts(parts []chunkPart) []string {
 
 func splitParagraph(section, text string, maxLen int) []chunkPart {
 	if maxLen <= 0 {
-		maxLen = 200
+		maxLen = defaultChunkTargetRunes
+	}
+	if maxLen > hardChunkMaxRunes {
+		maxLen = hardChunkMaxRunes
 	}
 	runes := []rune(strings.TrimSpace(text))
 	if len(runes) == 0 {
@@ -165,15 +173,130 @@ func splitParagraph(section, text string, maxLen int) []chunkPart {
 		return []chunkPart{{Section: section, Text: string(runes)}}
 	}
 	parts := make([]chunkPart, 0, (len(runes)/maxLen)+1)
+	var current string
+
+	flush := func() {
+		current = strings.TrimSpace(current)
+		if current == "" {
+			return
+		}
+		parts = append(parts, chunkPart{Section: section, Text: current})
+		current = ""
+	}
+
+	for _, sentence := range splitSentences(string(runes)) {
+		if lenRunes(sentence) > hardChunkMaxRunes {
+			flush()
+			for _, piece := range splitByRuneLimit(sentence, hardChunkMaxRunes) {
+				parts = append(parts, chunkPart{Section: section, Text: piece})
+			}
+			continue
+		}
+
+		if current == "" {
+			current = sentence
+			continue
+		}
+		next := joinChunkText(current, sentence)
+		if shouldStartNewChunk(lenRunes(current), lenRunes(next), maxLen) {
+			flush()
+			current = sentence
+			continue
+		}
+		current = next
+	}
+	flush()
+	return parts
+}
+
+func shouldStartNewChunk(currentLen, nextLen, targetLen int) bool {
+	if nextLen > hardChunkMaxRunes {
+		return true
+	}
+	if currentLen >= targetLen {
+		return true
+	}
+	if nextLen <= targetLen {
+		return false
+	}
+	return targetLen-currentLen <= nextLen-targetLen
+}
+
+func splitSentences(text string) []string {
+	runes := []rune(strings.TrimSpace(text))
+	if len(runes) == 0 {
+		return nil
+	}
+	sentences := make([]string, 0)
+	start := 0
+	for i, r := range runes {
+		if !isSentenceBoundary(r) {
+			continue
+		}
+		sentence := strings.TrimSpace(string(runes[start : i+1]))
+		if sentence != "" {
+			sentences = append(sentences, sentence)
+		}
+		start = i + 1
+	}
+	if start < len(runes) {
+		sentence := strings.TrimSpace(string(runes[start:]))
+		if sentence != "" {
+			sentences = append(sentences, sentence)
+		}
+	}
+	return sentences
+}
+
+func splitByRuneLimit(text string, limit int) []string {
+	if limit <= 0 {
+		limit = hardChunkMaxRunes
+	}
+	runes := []rune(strings.TrimSpace(text))
+	parts := make([]string, 0, (len(runes)/limit)+1)
 	for start := 0; start < len(runes); {
-		end := start + maxLen
+		end := start + limit
 		if end > len(runes) {
 			end = len(runes)
 		}
-		parts = append(parts, chunkPart{Section: section, Text: string(runes[start:end])})
+		part := strings.TrimSpace(string(runes[start:end]))
+		if part != "" {
+			parts = append(parts, part)
+		}
 		start = end
 	}
 	return parts
+}
+
+func joinChunkText(left, right string) string {
+	left = strings.TrimSpace(left)
+	right = strings.TrimSpace(right)
+	if left == "" {
+		return right
+	}
+	if right == "" {
+		return left
+	}
+	if needsSpaceBetween([]rune(left)[len([]rune(left))-1], []rune(right)[0]) {
+		return left + " " + right
+	}
+	return left + right
+}
+
+func needsSpaceBetween(left, right rune) bool {
+	return isASCIIAlphaNum(left) && isASCIIAlphaNum(right)
+}
+
+func isASCIIAlphaNum(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+}
+
+func isSentenceBoundary(r rune) bool {
+	return strings.ContainsRune("。！？.!?", r)
+}
+
+func lenRunes(text string) int {
+	return len([]rune(text))
 }
 
 func detectHeading(line string) string {
@@ -220,6 +343,17 @@ func normalizeChunkSource(text string) string {
 	text = strings.ReplaceAll(text, "\r", "\n")
 	text = strings.TrimSpace(text)
 	return text
+}
+
+func documentSectionTitle(fileName string) string {
+	name := strings.TrimSpace(fileName)
+	if name == "" {
+		return "未命名文档"
+	}
+	if idx := strings.LastIndex(name, "."); idx > 0 {
+		return name[:idx]
+	}
+	return name
 }
 
 func checksum(text string) string {

@@ -76,7 +76,7 @@ Authorization: Bearer <token>
 {
   "deepSeekBaseUrl": "https://ark.cn-beijing.volces.com/api/v3",
   "deepSeekAPIKey": "sk-...",
-  "deepSeekChatModel": "DeepSeek-V4-flash",
+  "deepSeekChatModel": "deepseek-v4-flash-260425",
   "qwenEmbeddingBaseUrl": "https://ark.cn-beijing.volces.com/api/v3",
   "qwenEmbeddingAPIKey": "sk-...",
   "qwenEmbeddingModel": "doubao-embedding-vision-251215",

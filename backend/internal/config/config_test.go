@@ -15,8 +15,8 @@ func TestLoadDefaultsToVolcengineModels(t *testing.T) {
 	if cfg.DeepSeekBaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("DeepSeekBaseURL = %q, want Volcengine Ark base URL", cfg.DeepSeekBaseURL)
 	}
-	if cfg.DeepSeekChatModel != "DeepSeek-V4-flash" {
-		t.Fatalf("DeepSeekChatModel = %q, want DeepSeek-V4-flash", cfg.DeepSeekChatModel)
+	if cfg.DeepSeekChatModel != "deepseek-v4-flash-260425" {
+		t.Fatalf("DeepSeekChatModel = %q, want deepseek-v4-flash-260425", cfg.DeepSeekChatModel)
 	}
 	if cfg.QwenEmbeddingBaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("QwenEmbeddingBaseURL = %q, want Volcengine Ark base URL", cfg.QwenEmbeddingBaseURL)

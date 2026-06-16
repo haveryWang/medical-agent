@@ -54,12 +54,35 @@ func (s *MongoStore) GetIngestionJob(ctx context.Context, id primitive.ObjectID)
 }
 
 func (s *MongoStore) RetryIngestionJob(ctx context.Context, id primitive.ObjectID) error {
-	_, err := s.db.Collection("ingestion_jobs").UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"status": "pending", "step": "retry", "error": "", "updatedAt": time.Now()}})
+	job, err := s.GetIngestionJob(ctx, id)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	_, err = s.db.Collection("ingestion_jobs").UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"status": "pending", "step": "retry", "error": "", "updatedAt": now}})
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Collection("documents").UpdateOne(ctx, bson.M{"_id": job.DocumentID}, bson.M{"$set": bson.M{"status": "pending", "failureReason": "", "updatedAt": now}})
 	return err
 }
 
 func (s *MongoStore) CompleteJobWithChunks(ctx context.Context, job models.IngestionJob, chunks []models.Chunk) error {
 	now := time.Now()
+	updateResult, err := s.db.Collection("ingestion_jobs").UpdateOne(
+		ctx,
+		bson.M{"_id": job.ID, "status": "processing"},
+		bson.M{"$set": bson.M{"status": "indexing", "step": "indexing", "updatedAt": now}},
+	)
+	if err != nil {
+		return err
+	}
+	if updateResult.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	if _, err := s.db.Collection("chunks").DeleteMany(ctx, bson.M{"documentId": job.DocumentID}); err != nil {
+		return err
+	}
 	if len(chunks) > 0 {
 		records := make([]any, 0, len(chunks))
 		for _, chunk := range chunks {
@@ -69,40 +92,56 @@ func (s *MongoStore) CompleteJobWithChunks(ctx context.Context, job models.Inges
 			return err
 		}
 	}
-	_, err := s.db.Collection("ingestion_jobs").UpdateOne(ctx, bson.M{"_id": job.ID}, bson.M{"$set": bson.M{"status": "completed", "step": "indexed", "updatedAt": now}})
-	if err != nil {
-		return err
-	}
 	_, err = s.db.Collection("documents").UpdateOne(ctx, bson.M{"_id": job.DocumentID}, bson.M{"$set": bson.M{"status": "completed", "updatedAt": now}})
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Collection("knowledge_bases").UpdateOne(ctx, bson.M{"_id": job.KnowledgeBaseID}, bson.M{"$inc": bson.M{"chunkCount": len(chunks)}, "$set": bson.M{"buildStatus": "completed", "updatedAt": now}})
-	return err
+	if _, err = s.db.Collection("ingestion_jobs").UpdateOne(
+		ctx,
+		bson.M{"_id": job.ID, "status": "indexing"},
+		bson.M{"$set": bson.M{"status": "completed", "step": "indexed", "updatedAt": now}},
+	); err != nil {
+		return err
+	}
+	return s.recountKnowledgeBase(ctx, job.KnowledgeBaseID)
 }
 
 func (s *MongoStore) FailJob(ctx context.Context, job models.IngestionJob, message string) error {
 	now := time.Now()
-	_, err := s.db.Collection("ingestion_jobs").UpdateOne(ctx, bson.M{"_id": job.ID}, bson.M{"$set": bson.M{"status": "failed", "step": "failed", "error": message, "updatedAt": now}, "$inc": bson.M{"attempts": 1}})
+	updateResult, err := s.db.Collection("ingestion_jobs").UpdateOne(ctx, bson.M{"_id": job.ID, "status": bson.M{"$in": []string{"processing", "indexing"}}}, bson.M{"$set": bson.M{"status": "failed", "step": "failed", "error": message, "updatedAt": now}, "$inc": bson.M{"attempts": 1}})
 	if err != nil {
 		return err
+	}
+	if updateResult.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
 	}
 	if _, err = s.db.Collection("documents").UpdateOne(ctx, bson.M{"_id": job.DocumentID}, bson.M{"$set": bson.M{"status": "failed", "failureReason": message, "updatedAt": now}}); err != nil {
 		return err
 	}
-	_, err = s.db.Collection("knowledge_bases").UpdateOne(ctx, bson.M{"_id": job.KnowledgeBaseID}, bson.M{"$set": bson.M{"buildStatus": "failed", "updatedAt": now}})
-	return err
+	return s.recountKnowledgeBase(ctx, job.KnowledgeBaseID)
 }
 
 func (s *MongoStore) PendingJobs(ctx context.Context, limit int64) ([]models.IngestionJob, error) {
-	cursor, err := s.db.Collection("ingestion_jobs").Find(ctx, bson.M{"status": "pending"}, options.Find().SetLimit(limit).SetSort(bson.D{{Key: "createdAt", Value: 1}}))
-	if err != nil {
-		return nil, err
+	if limit <= 0 {
+		limit = 1
 	}
-	defer cursor.Close(ctx)
-	var jobs []models.IngestionJob
-	if err := cursor.All(ctx, &jobs); err != nil {
-		return nil, err
+	jobs := make([]models.IngestionJob, 0, limit)
+	for int64(len(jobs)) < limit {
+		now := time.Now()
+		var job models.IngestionJob
+		err := s.db.Collection("ingestion_jobs").FindOneAndUpdate(
+			ctx,
+			bson.M{"status": "pending"},
+			bson.M{"$set": bson.M{"status": "processing", "step": "processing", "updatedAt": now}},
+			options.FindOneAndUpdate().SetSort(bson.D{{Key: "createdAt", Value: 1}}).SetReturnDocument(options.After),
+		).Decode(&job)
+		if err == mongo.ErrNoDocuments {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, job)
 	}
 	return jobs, nil
 }
@@ -194,7 +233,7 @@ func (s *MongoStore) recountKnowledgeBase(ctx context.Context, knowledgeBaseID p
 }
 
 func (s *MongoStore) knowledgeBuildStatus(ctx context.Context, knowledgeBaseID primitive.ObjectID) (string, error) {
-	pendingJobs, err := s.db.Collection("ingestion_jobs").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID, "status": "pending"})
+	pendingJobs, err := s.db.Collection("ingestion_jobs").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID, "status": bson.M{"$in": []string{"pending", "processing", "indexing"}}})
 	if err != nil {
 		return "", err
 	}

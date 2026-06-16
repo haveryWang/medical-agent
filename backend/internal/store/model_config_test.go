@@ -103,7 +103,7 @@ func TestDefaultModelConfigUsesVolcengineProvider(t *testing.T) {
 	fallback := config.Config{
 		DeepSeekBaseURL:        "https://ark.cn-beijing.volces.com/api/v3",
 		DeepSeekAPIKey:         "volcengine-key",
-		DeepSeekChatModel:      "DeepSeek-V4-flash",
+		DeepSeekChatModel:      "deepseek-v4-flash-260425",
 		QwenEmbeddingBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
 		QwenEmbeddingAPIKey:    "volcengine-key",
 		QwenEmbeddingModel:     "doubao-embedding-vision-251215",
@@ -115,8 +115,8 @@ func TestDefaultModelConfigUsesVolcengineProvider(t *testing.T) {
 	if got.DeepSeekBaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("DeepSeekBaseURL = %q, want Volcengine Ark base URL", got.DeepSeekBaseURL)
 	}
-	if got.DeepSeekChatModel != "DeepSeek-V4-flash" {
-		t.Fatalf("DeepSeekChatModel = %q, want DeepSeek-V4-flash", got.DeepSeekChatModel)
+	if got.DeepSeekChatModel != "deepseek-v4-flash-260425" {
+		t.Fatalf("DeepSeekChatModel = %q, want deepseek-v4-flash-260425", got.DeepSeekChatModel)
 	}
 	if got.QwenEmbeddingBaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("QwenEmbeddingBaseURL = %q, want Volcengine Ark base URL", got.QwenEmbeddingBaseURL)

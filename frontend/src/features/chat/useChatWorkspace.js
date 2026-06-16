@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { App } from 'antd';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { requireModelConfig } from '../../utils/modelConfig.js';
+import { knowledgeBaseNames, normalizeKnowledgeBaseIDs } from './knowledgeScope.js';
 
 const GENERIC_TITLES = new Set(['新的问答会话', '新建会话']);
 
@@ -348,16 +349,4 @@ export function useChatWorkspace() {
 
 function makeTitle(content) {
   return content.trim().slice(0, 24) || '新的问答会话';
-}
-
-function normalizeKnowledgeBaseIDs(ids = []) {
-  if (!Array.isArray(ids)) return ids ? [String(ids)] : [];
-  return ids.map(String).filter(Boolean);
-}
-
-function knowledgeBaseNames(ids, knowledgeBaseMap) {
-  return ids
-    .map((id) => knowledgeBaseMap.get(String(id))?.name)
-    .filter(Boolean)
-    .join('、');
 }

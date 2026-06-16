@@ -5,6 +5,9 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib.sh"
 
+log "检查 Go / Node / Docker 环境"
+ensure_dev_toolchain
+
 log "准备环境变量文件"
 ensure_backend_env
 ensure_frontend_env

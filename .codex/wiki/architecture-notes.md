@@ -22,7 +22,7 @@ The repository currently contains:
 - Vector database: Qdrant behind an internal vector client.
 - Model provider: Volcengine Ark-compatible API settings are stored in MongoDB
   and exposed through the backend settings API.
-- Chat model: `DeepSeek-V4-flash`.
+- Chat model: `deepseek-v4-flash-260425`.
 - Embedding model: `doubao-embedding-vision-251215` with 2048-dimensional vectors.
 
 ## Implemented Product Areas

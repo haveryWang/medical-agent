@@ -35,7 +35,7 @@ User sends question
 - `VOLCENGINE_API_KEY`: 火山引擎方舟 API Key，可同时作为 DeepSeek 对话和豆包向量模型的默认密钥。
 - `DEEPSEEK_API_KEY`: backend-only DeepSeek credential for chat. If unset, falls back to `VOLCENGINE_API_KEY`.
 - `DEEPSEEK_BASE_URL`: DeepSeek-compatible API base URL. Default: `https://ark.cn-beijing.volces.com/api/v3`.
-- `DEEPSEEK_CHAT_MODEL`: chat model name. Default: `DeepSeek-V4-flash`.
+- `DEEPSEEK_CHAT_MODEL`: chat model name. Default: `deepseek-v4-flash-260425`.
 - `QWEN_EMBEDDING_BASE_URL`: 火山引擎方舟向量模型 API base URL. Default: `https://ark.cn-beijing.volces.com/api/v3`.
 - `QWEN_EMBEDDING_API_KEY`: backend-only embedding credential. If unset, falls back to `VOLCENGINE_API_KEY`.
 - `QWEN_EMBEDDING_MODEL`: embedding model name. Default: `doubao-embedding-vision-251215`.

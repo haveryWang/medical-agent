@@ -18,6 +18,7 @@ export function useKnowledgeWorkspace() {
   const [loading, setLoading] = useState(false);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState([]);
   const [documentDrawerOpen, setDocumentDrawerOpen] = useState(false);
   const [documentViewer, setDocumentViewer] = useState({ open: false, title: '', content: '', loading: false });
   const [editorOpen, setEditorOpen] = useState(false);
@@ -158,12 +159,17 @@ export function useKnowledgeWorkspace() {
     }
   }
 
-  async function upload(file) {
-    if (!selected || !file) return;
+  async function upload(files) {
+    if (!selected) return;
+    const list = Array.isArray(files) ? files.filter(Boolean) : files ? [files] : [];
+    if (!list.length) return;
     setUploading(true);
+    setUploadQueue(list.map((file) => file.name));
     try {
       await requireModelConfig(api, ['embedding']);
-      await api.uploadDocument(selected.id, file);
+      for (const file of list) {
+        await api.uploadDocument(selected.id, file);
+      }
       toast.success('文档已上传，后台正在入库处理');
       await loadDocuments(selected);
       await load();
@@ -172,6 +178,7 @@ export function useKnowledgeWorkspace() {
       throw err;
     } finally {
       setUploading(false);
+      setUploadQueue([]);
     }
   }
 
@@ -245,6 +252,7 @@ export function useKnowledgeWorkspace() {
     selected,
     total,
     uploading,
+    uploadQueue,
     choose,
     createKnowledgeBase,
     deleteKnowledgeBase,

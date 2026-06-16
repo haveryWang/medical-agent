@@ -33,7 +33,7 @@ QDRANT_URL=http://localhost:6333
 QDRANT_COLLECTION=medical_agent_chunks
 
 DEEPSEEK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
-DEEPSEEK_CHAT_MODEL=DeepSeek-V4-flash
+DEEPSEEK_CHAT_MODEL=deepseek-v4-flash-260425
 DEEPSEEK_API_KEY=请在这里填写你的火山引擎方舟密钥
 
 QWEN_EMBEDDING_BASE_URL=https://ark.cn-beijing.volces.com/api/v3

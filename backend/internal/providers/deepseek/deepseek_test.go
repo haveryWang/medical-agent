@@ -26,7 +26,7 @@ func TestConfiguredUsesResolvedDatabaseModelConfig(t *testing.T) {
 func TestStreamChatRejectsIncompleteModelConfig(t *testing.T) {
 	client := New(config.Config{
 		DeepSeekBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
-		DeepSeekChatModel: "DeepSeek-V4-flash",
+		DeepSeekChatModel: "deepseek-v4-flash-260425",
 	})
 
 	err := client.StreamChat(context.Background(), []Message{{Role: "user", Content: "hello"}}, func(string) error {
