@@ -47,6 +47,10 @@ func (api *API) saveModelConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "Embedding 模型不能为空")
 		return
 	}
+	if strings.TrimSpace(req.QwenEmbeddingBaseURL) == "" {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "Embedding Base URL 不能为空")
+		return
+	}
 	if req.QwenEmbeddingDimension <= 0 {
 		writeError(w, r, http.StatusBadRequest, "validation_error", "Embedding 维度必须大于 0")
 		return

@@ -10,6 +10,12 @@ type createConversationRequest struct {
 	KnowledgeBaseIDs []string `json:"knowledgeBaseIds"`
 }
 
+type updateConversationRequest struct {
+	Title            *string  `json:"title"`
+	Status           *string  `json:"status"`
+	KnowledgeBaseIDs []string `json:"knowledgeBaseIds"`
+}
+
 type streamMessageRequest struct {
 	Content          string   `json:"content"`
 	KnowledgeBaseIDs []string `json:"knowledgeBaseIds"`

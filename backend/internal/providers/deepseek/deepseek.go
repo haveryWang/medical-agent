@@ -22,6 +22,8 @@ type Client struct {
 	modelResolver func(context.Context) models.ModelConfig
 }
 
+var ErrModelConfigIncomplete = errors.New("对话模型配置不完整")
+
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
@@ -70,20 +72,20 @@ func (c *Client) resolveConfig(ctx context.Context) config.Config {
 
 func (c *Client) Configured(ctx context.Context) bool {
 	cfg := c.resolveConfig(ctx)
-	return cfg.DeepSeekAPIKey != "" && cfg.DeepSeekBaseURL != "" && cfg.DeepSeekChatModel != ""
+	return chatConfigured(cfg)
 }
 
 func (c *Client) Health(ctx context.Context) error {
 	if !c.Configured(ctx) {
-		return errors.New("DeepSeek 未配置，需设置 DEEPSEEK_API_KEY")
+		return chatConfigError()
 	}
 	return nil
 }
 
 func (c *Client) StreamChat(ctx context.Context, messages []Message, onDelta func(string) error) error {
 	cfg := c.resolveConfig(ctx)
-	if cfg.DeepSeekAPIKey == "" || cfg.DeepSeekBaseURL == "" || cfg.DeepSeekChatModel == "" {
-		return c.localStream(ctx, messages, onDelta)
+	if !chatConfigured(cfg) {
+		return chatConfigError()
 	}
 	payload, err := json.Marshal(chatRequest{Model: cfg.DeepSeekChatModel, Messages: messages, Stream: true})
 	if err != nil {
@@ -137,6 +139,16 @@ func (c *Client) StreamChat(ctx context.Context, messages []Message, onDelta fun
 		}
 	}
 	return scanner.Err()
+}
+
+func chatConfigured(cfg config.Config) bool {
+	return strings.TrimSpace(cfg.DeepSeekBaseURL) != "" &&
+		strings.TrimSpace(cfg.DeepSeekAPIKey) != "" &&
+		strings.TrimSpace(cfg.DeepSeekChatModel) != ""
+}
+
+func chatConfigError() error {
+	return fmt.Errorf("%w，请在系统设置中配置对话 Base URL、API Key 和模型", ErrModelConfigIncomplete)
 }
 
 func (c *Client) localStream(ctx context.Context, messages []Message, onDelta func(string) error) error {

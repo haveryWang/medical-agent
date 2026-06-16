@@ -1,30 +1,51 @@
-import { NavLink } from 'react-router-dom';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { Avatar, Button, Layout, Space, Typography } from 'antd';
+import { DatabaseOutlined, LogoutOutlined, MessageOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ModelSettingsModal from '../features/settings/ModelSettingsModal.jsx';
 
+const { Header, Content } = Layout;
+
 export default function Shell({ children }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const navItems = useMemo(() => [
+    { to: '/chat', label: '对话管理', icon: <MessageOutlined /> },
+    { to: '/knowledge', label: '知识库管理', icon: <DatabaseOutlined /> },
+  ], []);
+
   return (
-    <main className="app-shell">
-      <header className="topbar">
+    <Layout className="app-shell">
+      <Header className="app-header">
         <div className="top-brand">
-          <span className="mini-shield">研</span>
-          <strong>医院知识库管理平台</strong>
+          <span className="brand-mark">研</span>
+          <div>
+            <b>医院知识库管理平台</b>
+          </div>
         </div>
-        <nav className="top-actions">
-          <NavLink className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to="/chat">对话管理</NavLink>
-          <NavLink className={({ isActive }) => (isActive ? 'tab active' : 'tab')} to="/knowledge">知识库管理</NavLink>
-          <button className="tab" onClick={() => setSettingsOpen(true)}>系统设置</button>
-          <span className="avatar">👤</span>
-          <span>{user?.displayName || '张医生'}</span>
-          <button className="ghost" onClick={logout}>退出</button>
-        </nav>
-      </header>
-      {children}
+        <Space size={8} className="top-actions">
+          {navItems.map((item) => (
+            <NavLink key={item.to} to={item.to} className={location.pathname === item.to ? 'nav-pill active' : 'nav-pill'}>
+              {item.icon}
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+          <Button icon={<SettingOutlined />} onClick={() => setSettingsOpen(true)}>
+            系统设置
+          </Button>
+          <Button icon={<LogoutOutlined />} onClick={logout}>
+            退出
+          </Button>
+          <Button icon={<UserOutlined />} disabled>
+            {user?.displayName || user?.account || '管理员'}
+          </Button>
+        </Space>
+      </Header>
+      <Content className="app-content">{children}</Content>
       <ModelSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </main>
+    </Layout>
   );
 }

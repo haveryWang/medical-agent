@@ -80,7 +80,7 @@ Authorization: Bearer <token>
   "qwenEmbeddingBaseUrl": "https://ark.cn-beijing.volces.com/api/v3",
   "qwenEmbeddingAPIKey": "sk-...",
   "qwenEmbeddingModel": "doubao-embedding-vision-251215",
-  "qwenEmbeddingDimension": 1024
+  "qwenEmbeddingDimension": 2048
 }
 ```
 
@@ -138,7 +138,19 @@ Authorization: Bearer <token>
 file=<上传文件>
 ```
 
-支持：PDF、Word、Excel、Markdown、文本文件。
+支持：PDF、Word(.docx)、Excel(.xlsx/.xls)、Markdown、TXT、CSV。单个文件不超过 15MB，原始文件会保存到 MongoDB 并进入预处理、切分、向量化流程。
+
+### GET `/knowledge-bases/{id}/documents/{documentId}`
+
+查看文档预处理后的文本内容。PDF/Word/Excel 会按入库预处理逻辑提取正文。
+
+### GET `/knowledge-bases/{id}/documents/{documentId}/chunks`
+
+查看文档已入库的分片内容，按 `chunkIndex` 升序返回。
+
+### GET `/knowledge-bases/{id}/documents/{documentId}/download`
+
+下载 MongoDB 中保存的原始文件。
 
 ## 入库任务
 

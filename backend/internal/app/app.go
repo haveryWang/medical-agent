@@ -65,7 +65,7 @@ func New(ctx context.Context, cfg config.Config, logger *log.Logger) (*App, erro
 		}
 	}()
 	ragService := rag.New(cfg, mongoStore, qwenClient, vectorClient, deepSeekClient)
-	api := httpapi.New(cfg, mongoStore, ragService, worker, logger)
+	api := httpapi.New(cfg, mongoStore, ragService, worker, vectorClient, logger)
 	return &App{cancel: cancel, store: mongoStore, router: api.Router()}, nil
 }
 

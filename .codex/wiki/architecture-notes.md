@@ -20,18 +20,23 @@ The repository currently contains:
 - Backend: Go + chi router.
 - Primary database: MongoDB for all non-vector data.
 - Vector database: Qdrant behind an internal vector client.
-- Chat model provider: DeepSeek, configured through backend-only environment
-  variables.
-- Embedding model provider: Qwen3-Embedding, configured separately from
-  DeepSeek chat settings.
+- Model provider: Volcengine Ark-compatible API settings are stored in MongoDB
+  and exposed through the backend settings API.
+- Chat model: `DeepSeek-V4-flash`.
+- Embedding model: `doubao-embedding-vision-251215` with 2048-dimensional vectors.
 
 ## Implemented Product Areas
 
 - Login and session management.
 - Agent chat workspace with streaming answers.
 - Knowledge-base management and document upload.
-- RAG ingestion, Qwen3 embedding, retrieval, prompt assembly, citations, and
-  answer details.
+- RAG ingestion, document preprocessing, embedding, retrieval, prompt assembly,
+  citations, and answer details.
+- Document preprocessing supports PDF, Word `.docx`, Excel `.xlsx/.xls`,
+  Markdown, TXT, and CSV. Legacy Word `.doc` is rejected with a conversion
+  message.
+- Knowledge-base documents can be downloaded from MongoDB raw content, previewed
+  as preprocessed text, and inspected by stored chunk text.
 - Full startup, build, API, architecture, and execution-record docs.
 
 ## Notable Boundaries

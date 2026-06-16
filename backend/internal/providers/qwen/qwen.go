@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"strings"
@@ -22,6 +23,8 @@ type Client struct {
 	httpClient    *http.Client
 	modelResolver func(context.Context) models.ModelConfig
 }
+
+var ErrModelConfigIncomplete = errors.New("向量模型配置不完整")
 
 type embeddingRequest struct {
 	Model string   `json:"model"`
@@ -42,6 +45,32 @@ type embeddingResponse struct {
 	Data []struct {
 		Embedding []float64 `json:"embedding"`
 	} `json:"data"`
+}
+
+type multimodalEmbeddingResponse struct {
+	Data struct {
+		Embedding embeddingVector `json:"embedding"`
+	} `json:"data"`
+}
+
+type embeddingVector []float64
+
+func (v *embeddingVector) UnmarshalJSON(data []byte) error {
+	var flat []float64
+	if err := json.Unmarshal(data, &flat); err == nil {
+		*v = flat
+		return nil
+	}
+	var nested [][]float64
+	if err := json.Unmarshal(data, &nested); err != nil {
+		return err
+	}
+	if len(nested) == 0 {
+		*v = nil
+		return nil
+	}
+	*v = nested[0]
+	return nil
 }
 
 func New(cfg config.Config, options ...func(*Client)) *Client {
@@ -84,12 +113,12 @@ func (c *Client) resolveConfig(ctx context.Context) config.Config {
 
 func (c *Client) Configured(ctx context.Context) bool {
 	cfg := c.resolveConfig(ctx)
-	return cfg.QwenEmbeddingBaseURL != "" && cfg.QwenEmbeddingAPIKey != "" && cfg.QwenEmbeddingModel != "" && cfg.QwenEmbeddingDimension > 0
+	return embeddingConfigured(cfg)
 }
 
 func (c *Client) Health(ctx context.Context) error {
 	if !c.Configured(ctx) {
-		return errors.New("向量模型未配置，需设置 VOLCENGINE_API_KEY 或 QWEN_EMBEDDING_BASE_URL/QWEN_EMBEDDING_API_KEY/QWEN_EMBEDDING_MODEL/QWEN_EMBEDDING_DIMENSION")
+		return embeddingConfigError()
 	}
 	_, err := c.Embed(ctx, []string{"健康检查"})
 	return err
@@ -100,42 +129,38 @@ func (c *Client) Embed(ctx context.Context, texts []string) ([][]float64, error)
 		return nil, nil
 	}
 	cfg := c.resolveConfig(ctx)
-	if cfg.QwenEmbeddingBaseURL != "" && cfg.QwenEmbeddingAPIKey != "" && cfg.QwenEmbeddingModel != "" && cfg.QwenEmbeddingDimension > 0 {
-		vectors, err := c.remoteEmbed(ctx, cfg, texts)
-		if err == nil {
-			return vectors, nil
-		}
-		return nil, err
+	if !embeddingConfigured(cfg) {
+		return nil, embeddingConfigError()
 	}
-	vectors := make([][]float64, 0, len(texts))
-	for _, text := range texts {
-		vectors = append(vectors, deterministicVector(text, cfg.QwenEmbeddingDimension))
-	}
-	return vectors, nil
+	return c.remoteEmbed(ctx, cfg, texts)
+}
+
+func embeddingConfigured(cfg config.Config) bool {
+	return strings.TrimSpace(cfg.QwenEmbeddingBaseURL) != "" &&
+		strings.TrimSpace(cfg.QwenEmbeddingAPIKey) != "" &&
+		strings.TrimSpace(cfg.QwenEmbeddingModel) != "" &&
+		cfg.QwenEmbeddingDimension > 0
+}
+
+func embeddingConfigError() error {
+	return fmt.Errorf("%w，请在系统设置中配置向量 Base URL、API Key、模型和维度", ErrModelConfigIncomplete)
 }
 
 func (c *Client) remoteEmbed(ctx context.Context, cfg config.Config, texts []string) ([][]float64, error) {
+	if isVolcengineMultimodalEmbeddingModel(cfg.QwenEmbeddingModel) {
+		return c.remoteMultimodalEmbed(ctx, cfg, texts)
+	}
 	payload, path, err := embeddingPayload(cfg.QwenEmbeddingModel, texts)
 	if err != nil {
 		return nil, err
 	}
 	url := strings.TrimRight(cfg.QwenEmbeddingBaseURL, "/") + path
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	body, err := c.postEmbedding(ctx, url, cfg.QwenEmbeddingAPIKey, payload)
 	if err != nil {
 		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+cfg.QwenEmbeddingAPIKey)
-	req.Header.Set("Content-Type", "application/json")
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, fmt.Errorf("向量模型返回状态码 %d", res.StatusCode)
 	}
 	var decoded embeddingResponse
-	if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
+	if err := json.Unmarshal(body, &decoded); err != nil {
 		return nil, err
 	}
 	if len(decoded.Data) != len(texts) {
@@ -151,22 +176,80 @@ func (c *Client) remoteEmbed(ctx context.Context, cfg config.Config, texts []str
 	return vectors, nil
 }
 
-func embeddingPayload(model string, texts []string) ([]byte, string, error) {
-	if model == "doubao-embedding-vision-251215" {
-		input := make([]multimodalEmbeddingItem, 0, len(texts))
-		for _, text := range texts {
-			input = append(input, multimodalEmbeddingItem{Type: "text", Text: text})
+func (c *Client) remoteMultimodalEmbed(ctx context.Context, cfg config.Config, texts []string) ([][]float64, error) {
+	url := strings.TrimRight(cfg.QwenEmbeddingBaseURL, "/") + "/embeddings/multimodal"
+	vectors := make([][]float64, 0, len(texts))
+	for _, text := range texts {
+		payload, err := json.Marshal(multimodalEmbeddingRequest{
+			Model: cfg.QwenEmbeddingModel,
+			Input: []multimodalEmbeddingItem{{Type: "text", Text: text}},
+		})
+		if err != nil {
+			return nil, err
 		}
-		payload, err := json.Marshal(multimodalEmbeddingRequest{Model: model, Input: input})
-		return payload, "/embeddings/multimodal", err
+		body, err := c.postEmbedding(ctx, url, cfg.QwenEmbeddingAPIKey, payload)
+		if err != nil {
+			return nil, err
+		}
+		var decoded multimodalEmbeddingResponse
+		if err := json.Unmarshal(body, &decoded); err != nil {
+			return nil, err
+		}
+		vector := []float64(decoded.Data.Embedding)
+		if len(vector) != cfg.QwenEmbeddingDimension {
+			return nil, fmt.Errorf("向量模型维度不匹配: got %d want %d", len(vector), cfg.QwenEmbeddingDimension)
+		}
+		vectors = append(vectors, vector)
 	}
+	return vectors, nil
+}
+
+func (c *Client) postEmbedding(ctx context.Context, url string, apiKey string, payload []byte) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return nil, modelHTTPError(res.StatusCode, body)
+	}
+	return body, nil
+}
+
+func embeddingPayload(model string, texts []string) ([]byte, string, error) {
 	payload, err := json.Marshal(embeddingRequest{Model: model, Input: texts})
 	return payload, "/embeddings", err
 }
 
+func isVolcengineMultimodalEmbeddingModel(model string) bool {
+	return model == "doubao-embedding-vision-251215"
+}
+
+func modelHTTPError(statusCode int, body []byte) error {
+	message := strings.TrimSpace(string(body))
+	if message == "" {
+		return fmt.Errorf("向量模型返回状态码 %d", statusCode)
+	}
+	if len([]rune(message)) > 300 {
+		runes := []rune(message)
+		message = string(runes[:300]) + "..."
+	}
+	return fmt.Errorf("向量模型返回状态码 %d: %s", statusCode, message)
+}
+
 func deterministicVector(text string, dimension int) []float64 {
 	if dimension <= 0 {
-		dimension = 1024
+		dimension = config.DefaultQwenEmbeddingDimension
 	}
 	vector := make([]float64, dimension)
 	for i := 0; i < dimension; i++ {

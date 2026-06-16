@@ -70,7 +70,7 @@ sudo usermod -aG docker $USER
 ```
 
 执行后退出并重新登录终端。
-
+docker
 ## 2. 本项目容器说明
 
 项目根目录的 `docker-compose.yml` 定义了两个服务：

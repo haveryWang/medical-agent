@@ -85,9 +85,10 @@ func defaultModelConfig(fallback config.Config) models.ModelConfig {
 func legacyDefaultModelConfigFilter() bson.M {
 	return bson.M{"$or": []bson.M{
 		{"deepSeekBaseUrl": bson.M{"$in": []string{"", "https://api.deepseek.com"}}},
-		{"deepSeekChatModel": bson.M{"$in": []string{"", "deepseek-v4-flash"}}},
+		{"deepSeekChatModel": bson.M{"$in": []string{"", "deepseek-v4-flash-260425"}}},
 		{"qwenEmbeddingBaseUrl": bson.M{"$in": []string{"", "https://dashscope.aliyuncs.com/compatible-mode/v1"}}},
 		{"qwenEmbeddingModel": bson.M{"$in": []string{"", "Qwen3-Embedding"}}},
+		{"qwenEmbeddingModel": "doubao-embedding-vision-251215", "qwenEmbeddingDimension": bson.M{"$ne": 2048}},
 	}}
 }
 
@@ -116,6 +117,9 @@ func mergeModelConfig(current models.ModelConfig, fallback config.Config) models
 	}
 	if current.QwenEmbeddingDimension <= 0 {
 		current.QwenEmbeddingDimension = fallback.QwenEmbeddingDimension
+	}
+	if current.QwenEmbeddingModel == config.DefaultQwenEmbeddingModel {
+		current.QwenEmbeddingDimension = config.DefaultQwenEmbeddingDimension
 	}
 	return current
 }

@@ -1,129 +1,115 @@
 import { useEffect, useState } from 'react';
+import { Alert, App, Form, Input, InputNumber, Modal, Typography } from 'antd';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
-const emptyForm = {
+const defaults = {
   deepSeekBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
   deepSeekAPIKey: '',
   deepSeekChatModel: 'DeepSeek-V4-flash',
   qwenEmbeddingBaseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
   qwenEmbeddingAPIKey: '',
   qwenEmbeddingModel: 'doubao-embedding-vision-251215',
-  qwenEmbeddingDimension: 1024,
+  qwenEmbeddingDimension: 2048,
 };
 
 export default function ModelSettingsModal({ open, onClose }) {
   const { api } = useAuth();
-  const [form, setForm] = useState(emptyForm);
-  const [status, setStatus] = useState('');
-  const [error, setError] = useState('');
+  const { message } = App.useApp();
+  const [form] = Form.useForm();
+  const [keyStatus, setKeyStatus] = useState('');
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     let mounted = true;
-    setError('');
-    setStatus('正在读取当前配置...');
+    setLoading(true);
     api.getModelConfig()
       .then((cfg) => {
         if (!mounted) return;
-        setForm({
-          deepSeekBaseUrl: cfg.deepSeekBaseUrl || '',
+        form.setFieldsValue({
+          deepSeekBaseUrl: cfg.deepSeekBaseUrl || defaults.deepSeekBaseUrl,
           deepSeekAPIKey: '',
-          deepSeekChatModel: cfg.deepSeekChatModel || 'DeepSeek-V4-flash',
-          qwenEmbeddingBaseUrl: cfg.qwenEmbeddingBaseUrl || '',
+          deepSeekChatModel: cfg.deepSeekChatModel || defaults.deepSeekChatModel,
+          qwenEmbeddingBaseUrl: cfg.qwenEmbeddingBaseUrl || defaults.qwenEmbeddingBaseUrl,
           qwenEmbeddingAPIKey: '',
-          qwenEmbeddingModel: cfg.qwenEmbeddingModel || 'doubao-embedding-vision-251215',
-          qwenEmbeddingDimension: cfg.qwenEmbeddingDimension || 1024,
+          qwenEmbeddingModel: cfg.qwenEmbeddingModel || defaults.qwenEmbeddingModel,
+          qwenEmbeddingDimension: cfg.qwenEmbeddingDimension || defaults.qwenEmbeddingDimension,
         });
-        const deepSeek = cfg.deepSeekAPIKeySet ? `DeepSeek Key 已保存（${cfg.deepSeekAPIKeyPreview}）` : 'DeepSeek Key 未配置';
-        const qwen = cfg.qwenEmbeddingAPIKeySet ? `Qwen Key 已保存（${cfg.qwenEmbeddingAPIKeyPreview}）` : 'Qwen Key 未配置';
-        setStatus(`${deepSeek}；${qwen}`);
+        const chatKey = cfg.deepSeekAPIKeySet ? `对话 Key 已保存（${cfg.deepSeekAPIKeyPreview}）` : '对话 Key 未配置';
+        const embeddingKey = cfg.qwenEmbeddingAPIKeySet ? `向量 Key 已保存（${cfg.qwenEmbeddingAPIKeyPreview}）` : '向量 Key 未配置';
+        setKeyStatus(`${chatKey}；${embeddingKey}`);
       })
-      .catch((err) => {
-        if (!mounted) return;
-        setStatus('');
-        setError(err.message);
-      });
+      .catch((err) => message.error(err.message))
+      .finally(() => mounted && setLoading(false));
     return () => {
       mounted = false;
     };
-  }, [open, api]);
+  }, [open, api, form, message]);
 
-  if (!open) return null;
-
-  function update(name, value) {
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function save(e) {
-    e.preventDefault();
+  async function save() {
+    const values = await form.validateFields();
     setSaving(true);
-    setError('');
     try {
       const saved = await api.saveModelConfig({
-        ...form,
-        qwenEmbeddingDimension: Number(form.qwenEmbeddingDimension),
+        ...values,
+        qwenEmbeddingDimension: Number(values.qwenEmbeddingDimension),
       });
-      const deepSeek = saved.deepSeekAPIKeySet ? `DeepSeek Key 已保存（${saved.deepSeekAPIKeyPreview}）` : 'DeepSeek Key 未配置';
-      const qwen = saved.qwenEmbeddingAPIKeySet ? `Qwen Key 已保存（${saved.qwenEmbeddingAPIKeyPreview}）` : 'Qwen Key 未配置';
-      setStatus(`${deepSeek}；${qwen}`);
-      setForm((prev) => ({ ...prev, deepSeekAPIKey: '', qwenEmbeddingAPIKey: '' }));
+      const chatKey = saved.deepSeekAPIKeySet ? `对话 Key 已保存（${saved.deepSeekAPIKeyPreview}）` : '对话 Key 未配置';
+      const embeddingKey = saved.qwenEmbeddingAPIKeySet ? `向量 Key 已保存（${saved.qwenEmbeddingAPIKeyPreview}）` : '向量 Key 未配置';
+      setKeyStatus(`${chatKey}；${embeddingKey}`);
+      form.setFieldsValue({ deepSeekAPIKey: '', qwenEmbeddingAPIKey: '' });
+      message.success('模型配置已保存到数据库');
+      onClose();
     } catch (err) {
-      setError(err.message);
+      message.error(err.message);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="model-settings-title">
-        <header>
-          <div>
-            <h2 id="model-settings-title">模型配置</h2>
-            <p>配置会保存到数据库，后端入库和问答任务执行时会读取这里的值。</p>
-          </div>
-          <button className="modal-close" onClick={onClose} aria-label="关闭">×</button>
-        </header>
-        <form onSubmit={save}>
-          <div className="settings-grid">
-            <label>
-              <span>DeepSeek Base URL</span>
-              <input value={form.deepSeekBaseUrl} onChange={(e) => update('deepSeekBaseUrl', e.target.value)} placeholder="https://ark.cn-beijing.volces.com/api/v3" />
-            </label>
-            <label>
-              <span>DeepSeek Chat Model</span>
-              <input value={form.deepSeekChatModel} onChange={(e) => update('deepSeekChatModel', e.target.value)} placeholder="DeepSeek-V4-flash" />
-            </label>
-            <label className="full">
-              <span>DeepSeek API Key</span>
-              <input type="password" value={form.deepSeekAPIKey} onChange={(e) => update('deepSeekAPIKey', e.target.value)} placeholder="留空则保留已保存密钥" autoComplete="off" />
-            </label>
-            <label>
-              <span>火山向量 Base URL</span>
-              <input value={form.qwenEmbeddingBaseUrl} onChange={(e) => update('qwenEmbeddingBaseUrl', e.target.value)} placeholder="https://ark.cn-beijing.volces.com/api/v3" />
-            </label>
-            <label>
-              <span>火山向量模型</span>
-              <input value={form.qwenEmbeddingModel} onChange={(e) => update('qwenEmbeddingModel', e.target.value)} placeholder="doubao-embedding-vision-251215" />
-            </label>
-            <label>
-              <span>火山引擎 API Key</span>
-              <input type="password" value={form.qwenEmbeddingAPIKey} onChange={(e) => update('qwenEmbeddingAPIKey', e.target.value)} placeholder="留空则保留已保存密钥" autoComplete="off" />
-            </label>
-            <label>
-              <span>向量维度</span>
-              <input type="number" min="1" value={form.qwenEmbeddingDimension} onChange={(e) => update('qwenEmbeddingDimension', e.target.value)} />
-            </label>
-          </div>
-          {status ? <p className="settings-status">{status}</p> : null}
-          {error ? <p className="form-error">{error}</p> : null}
-          <footer>
-            <button type="button" className="ghost bordered" onClick={onClose}>取消</button>
-            <button type="submit" className="primary" disabled={saving}>{saving ? '保存中...' : '保存配置'}</button>
-          </footer>
-        </form>
-      </section>
-    </div>
+    <Modal
+      title="模型配置"
+      open={open}
+      onCancel={onClose}
+      onOk={save}
+      confirmLoading={saving}
+      okText="保存配置"
+      cancelText="取消"
+      width={820}
+      destroyOnHidden
+      loading={loading}
+    >
+      <Typography.Paragraph type="secondary">
+        配置保存到数据库，后端问答和向量任务执行时会读取当前值。API Key 留空表示保留数据库中已保存的密钥。
+      </Typography.Paragraph>
+      {keyStatus ? <Alert type="info" showIcon message={keyStatus} className="settings-alert" /> : null}
+      <Form form={form} layout="vertical" initialValues={defaults} className="settings-form">
+        <div className="settings-form-grid">
+          <Form.Item name="deepSeekBaseUrl" label="对话 Base URL" rules={[{ required: true, message: '请输入对话 Base URL' }]}>
+            <Input placeholder="https://ark.cn-beijing.volces.com/api/v3" />
+          </Form.Item>
+          <Form.Item name="deepSeekChatModel" label="对话模型" rules={[{ required: true, message: '请输入对话模型' }]}>
+            <Input placeholder="DeepSeek-V4-flash" />
+          </Form.Item>
+          <Form.Item name="deepSeekAPIKey" label="对话 API Key" className="settings-form-full">
+            <Input.Password placeholder="留空则保留已保存密钥" autoComplete="off" />
+          </Form.Item>
+          <Form.Item name="qwenEmbeddingBaseUrl" label="向量 Base URL" rules={[{ required: true, message: '请输入向量 Base URL' }]}>
+            <Input placeholder="https://ark.cn-beijing.volces.com/api/v3" />
+          </Form.Item>
+          <Form.Item name="qwenEmbeddingModel" label="向量模型" rules={[{ required: true, message: '请输入向量模型' }]}>
+            <Input placeholder="doubao-embedding-vision-251215" />
+          </Form.Item>
+          <Form.Item name="qwenEmbeddingAPIKey" label="向量 API Key">
+            <Input.Password placeholder="留空则保留已保存密钥" autoComplete="off" />
+          </Form.Item>
+          <Form.Item name="qwenEmbeddingDimension" label="向量维度" rules={[{ required: true, message: '请输入向量维度' }]}>
+            <InputNumber min={1} precision={0} className="full-width" />
+          </Form.Item>
+        </div>
+      </Form>
+    </Modal>
   );
 }

@@ -107,7 +107,7 @@ func TestDefaultModelConfigUsesVolcengineProvider(t *testing.T) {
 		QwenEmbeddingBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
 		QwenEmbeddingAPIKey:    "volcengine-key",
 		QwenEmbeddingModel:     "doubao-embedding-vision-251215",
-		QwenEmbeddingDimension: 1024,
+		QwenEmbeddingDimension: 2048,
 	}
 
 	got := defaultModelConfig(fallback)
@@ -124,8 +124,27 @@ func TestDefaultModelConfigUsesVolcengineProvider(t *testing.T) {
 	if got.QwenEmbeddingModel != "doubao-embedding-vision-251215" {
 		t.Fatalf("QwenEmbeddingModel = %q, want doubao-embedding-vision-251215", got.QwenEmbeddingModel)
 	}
-	if got.QwenEmbeddingDimension != 1024 {
-		t.Fatalf("QwenEmbeddingDimension = %d, want 1024", got.QwenEmbeddingDimension)
+	if got.QwenEmbeddingDimension != 2048 {
+		t.Fatalf("QwenEmbeddingDimension = %d, want 2048", got.QwenEmbeddingDimension)
+	}
+}
+
+func TestMergeModelConfigCorrectsDoubaoVisionDimension(t *testing.T) {
+	fallback := config.Config{
+		QwenEmbeddingBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
+		QwenEmbeddingAPIKey:    "volcengine-key",
+		QwenEmbeddingModel:     "doubao-embedding-vision-251215",
+		QwenEmbeddingDimension: 2048,
+	}
+	got := mergeModelConfig(models.ModelConfig{
+		QwenEmbeddingBaseURL:   "https://ark.cn-beijing.volces.com/api/v3",
+		QwenEmbeddingAPIKey:    "db-key",
+		QwenEmbeddingModel:     "doubao-embedding-vision-251215",
+		QwenEmbeddingDimension: 1024,
+	}, fallback)
+
+	if got.QwenEmbeddingDimension != 2048 {
+		t.Fatalf("QwenEmbeddingDimension = %d, want corrected 2048", got.QwenEmbeddingDimension)
 	}
 }
 

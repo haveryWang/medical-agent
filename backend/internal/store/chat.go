@@ -49,8 +49,30 @@ func (s *MongoStore) ListConversations(ctx context.Context, userID primitive.Obj
 
 func (s *MongoStore) GetConversation(ctx context.Context, id primitive.ObjectID, userID primitive.ObjectID) (models.Conversation, error) {
 	var conversation models.Conversation
-	err := s.db.Collection("conversations").FindOne(ctx, bson.M{"_id": id, "userId": userID}).Decode(&conversation)
+	err := s.db.Collection("conversations").FindOne(ctx, bson.M{"_id": id, "userId": userID, "status": bson.M{"$ne": "deleted"}}).Decode(&conversation)
 	return conversation, err
+}
+
+func (s *MongoStore) UpdateConversation(ctx context.Context, id primitive.ObjectID, userID primitive.ObjectID, patch bson.M) (models.Conversation, error) {
+	patch["updatedAt"] = time.Now()
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	var conversation models.Conversation
+	err := s.db.Collection("conversations").FindOneAndUpdate(
+		ctx,
+		bson.M{"_id": id, "userId": userID, "status": bson.M{"$ne": "deleted"}},
+		bson.M{"$set": patch},
+		opts,
+	).Decode(&conversation)
+	return conversation, err
+}
+
+func (s *MongoStore) DeleteConversation(ctx context.Context, id primitive.ObjectID, userID primitive.ObjectID) error {
+	_, err := s.db.Collection("conversations").UpdateOne(
+		ctx,
+		bson.M{"_id": id, "userId": userID, "status": bson.M{"$ne": "deleted"}},
+		bson.M{"$set": bson.M{"status": "deleted", "updatedAt": time.Now()}},
+	)
+	return err
 }
 
 func (s *MongoStore) CreateMessage(ctx context.Context, message models.Message) (models.Message, error) {

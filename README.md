@@ -11,16 +11,28 @@
 
 ## 快速启动
 
-请阅读中文启动文档：
+首次准备：
 
-```text
-docs/runbooks/启动说明.md
+```bash
+sh scripts/setup.sh
+```
+
+一键启动：
+
+```bash
+sh scripts/start-all.sh
 ```
 
 Docker 安装、MongoDB/Qdrant 容器查看说明：
 
 ```text
 docs/runbooks/docker和数据库查看.md
+```
+
+手动清空业务数据库并保留一个 admin 账号：
+
+```bash
+sh scripts/reset-database.sh
 ```
 
 ## 默认账号
@@ -34,6 +46,7 @@ docs/runbooks/docker和数据库查看.md
 
 - `frontend/`：React 前端界面，按 `api/`、`contexts/`、`layouts/`、`pages/`、`features/`、`components/` 拆分
 - `backend/`：Go 后端服务，HTTP 层使用 chi，Mongo store 按领域拆分
+- `scripts/`：本地 setup、启动、构建和测试脚本
 - `backend/scripts/mongo-init.js`：MongoDB 集合和索引初始化脚本
 - `backend/scripts/qdrant-init.sh`：Qdrant collection 初始化脚本
 - `docs/api/`：接口对接文档

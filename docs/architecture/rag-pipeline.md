@@ -39,7 +39,7 @@ User sends question
 - `QWEN_EMBEDDING_BASE_URL`: 火山引擎方舟向量模型 API base URL. Default: `https://ark.cn-beijing.volces.com/api/v3`.
 - `QWEN_EMBEDDING_API_KEY`: backend-only embedding credential. If unset, falls back to `VOLCENGINE_API_KEY`.
 - `QWEN_EMBEDDING_MODEL`: embedding model name. Default: `doubao-embedding-vision-251215`.
-- `QWEN_EMBEDDING_DIMENSION`: vector dimension used when creating the Qdrant collection.
+- `QWEN_EMBEDDING_DIMENSION`: vector dimension used when creating the Qdrant collection. `doubao-embedding-vision-251215` returns 2048-dimensional vectors.
 - `MONGODB_URI`: MongoDB connection string.
 - `QDRANT_URL`: Qdrant connection URL.
 
@@ -52,8 +52,9 @@ User sends question
 
 ## Current Implementation Notes
 
-- Uploaded files are stored under `UPLOAD_DIR`, default `../data/uploads`.
-- The demo parser reads text-like content directly and keeps metadata for binary files. Production parsing adapters can replace `backend/internal/ingestion/ingestion.go`.
+- Uploaded files are limited to 15MB per file and stored as BSON binary content in MongoDB `documents.content`.
+- The ingestion preprocessor supports PDF, Word `.docx`, Excel `.xlsx/.xls`, Markdown, TXT, and CSV. Markdown syntax is cleaned, Word XML parts are extracted, Excel sheets are flattened with sheet names, and all extracted text is normalized before chunking.
+- Legacy Word `.doc` uploads are rejected with a conversion message; users should save them as `.docx` before upload.
 - If 火山引擎方舟向量模型 variables are not configured, the backend uses deterministic local vectors for development only.
 - If DeepSeek is not configured, the backend streams a local demo answer for development only.
 - MongoDB stores canonical metadata and message records. Qdrant stores vectors.

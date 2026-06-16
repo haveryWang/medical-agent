@@ -8,17 +8,22 @@
 
 ## Current State
 
-The repository is in planning stage for a full-stack RAG knowledge-base
-conversation system. There is no application source tree, package manifest,
-runtime, test command, or deployment setup visible yet.
+The repository contains an implemented full-stack RAG knowledge-base
+conversation system:
 
-An active OpenSpec change defines the target system:
+- Go backend under `backend/`
+- React frontend under `frontend/`
+- MongoDB for canonical data
+- Qdrant for vector search
+- Volcengine Ark-compatible model settings stored in MongoDB
+
+The active OpenSpec change for this implementation remains:
 
 - `openspec/changes/build-rag-knowledge-chat-system/`
 
 ## Canonical Sources
 
-- `README.md` contains the public project name.
+- `README.md` contains the public project name and local startup guidance.
 - `design.png` contains the initial UI and system requirement design source.
 - `openspec/config.yaml` defines the OpenSpec workflow configuration.
 - `openspec/specs/` is reserved for accepted capability specs.
@@ -27,10 +32,8 @@ An active OpenSpec change defines the target system:
   the implementation plan for the active RAG system change.
 - `docs/records/task-log.md` is the required implementation record.
 
-## Unknowns To Fill In
+## Known Runtime Notes
 
-- Runtime entrypoints
-- Test strategy
-- Deployment target
-- Security, privacy, and compliance requirements
-- Exact Qwen3-Embedding endpoint, model id, API key source, and vector dimensions
+- Backend tests run with `CGO_ENABLED=0 go test ./...` on this macOS setup to
+  avoid the local dyld `missing LC_UUID load command` failure.
+- Frontend production build runs from `frontend/` with `npm run build`.

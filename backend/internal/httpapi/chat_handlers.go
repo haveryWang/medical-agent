@@ -35,6 +35,61 @@ func (api *API) createConversation(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, conversation)
 }
 
+func (api *API) updateConversation(w http.ResponseWriter, r *http.Request) {
+	id, err := store.ObjectIDFromHex(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_id", "会话 ID 无效")
+		return
+	}
+	var req updateConversationRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	patch := bson.M{}
+	if req.Title != nil {
+		title := strings.TrimSpace(*req.Title)
+		if title == "" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "会话标题不能为空")
+			return
+		}
+		patch["title"] = title
+	}
+	if req.Status != nil {
+		status := strings.TrimSpace(*req.Status)
+		if status != "active" && status != "archived" {
+			writeError(w, r, http.StatusBadRequest, "validation_error", "会话状态无效")
+			return
+		}
+		patch["status"] = status
+	}
+	if req.KnowledgeBaseIDs != nil {
+		patch["knowledgeBaseIds"] = parseObjectIDs(req.KnowledgeBaseIDs)
+	}
+	if len(patch) == 0 {
+		writeError(w, r, http.StatusBadRequest, "validation_error", "没有可更新字段")
+		return
+	}
+	conversation, err := api.store.UpdateConversation(r.Context(), id, currentUser(r).ID, patch)
+	if err != nil {
+		writeError(w, r, http.StatusNotFound, "not_found", "会话不存在")
+		return
+	}
+	writeJSON(w, http.StatusOK, conversation)
+}
+
+func (api *API) deleteConversation(w http.ResponseWriter, r *http.Request) {
+	id, err := store.ObjectIDFromHex(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "invalid_id", "会话 ID 无效")
+		return
+	}
+	if err := api.store.DeleteConversation(r.Context(), id, currentUser(r).ID); err != nil {
+		writeError(w, r, http.StatusInternalServerError, "delete_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func (api *API) listMessages(w http.ResponseWriter, r *http.Request) {
 	id, err := store.ObjectIDFromHex(chi.URLParam(r, "id"))
 	if err != nil {
@@ -93,7 +148,7 @@ func (api *API) streamMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	_, _ = api.store.CreateMessage(r.Context(), models.Message{ConversationID: conversationID, Role: "user", Content: content, Status: "completed"})
 	kbIDs := conversation.KnowledgeBaseIDs
-	if len(req.KnowledgeBaseIDs) > 0 {
+	if req.KnowledgeBaseIDs != nil {
 		kbIDs = parseObjectIDs(req.KnowledgeBaseIDs)
 	}
 	retrieval, err := api.rag.Retrieve(r.Context(), content, kbIDs)

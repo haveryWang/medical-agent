@@ -92,7 +92,7 @@ Alternatives considered:
 
 ### Decision: DeepSeek for chat and Qwen3-Embedding for embeddings
 
-Use DeepSeek for chat completion through a backend-only provider adapter. The DeepSeek API key is read from environment or deployment configuration, for example `DEEPSEEK_API_KEY`. The default planned chat model is `deepseek-v4-flash`, with `deepseek-v4-pro` available as a configurable higher-reasoning option.
+Use DeepSeek for chat completion through a backend-only provider adapter. The DeepSeek API key is read from environment or deployment configuration, for example `DEEPSEEK_API_KEY`. The default planned chat model is `deepseek-v4-flash-260425`, with `deepseek-v4-pro` available as a configurable higher-reasoning option.
 
 RAG embedding generation uses Qwen3-Embedding through a separate backend-only provider adapter. The Qwen embedding endpoint, API key, model name, and vector dimension are configured separately from DeepSeek chat settings so the embedding service can be operated and tuned independently.
 

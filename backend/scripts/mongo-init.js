@@ -59,7 +59,7 @@ db.model_configs.updateOne(
       deepSeekChatModel: "DeepSeek-V4-flash",
       qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
       qwenEmbeddingModel: "doubao-embedding-vision-251215",
-      qwenEmbeddingDimension: 1024,
+      qwenEmbeddingDimension: 2048,
       updatedAt: new Date()
     }
   },
@@ -70,7 +70,7 @@ db.model_configs.updateMany(
   {
     $or: [
       { deepSeekBaseUrl: { $in: [null, "", "https://api.deepseek.com"] } },
-      { deepSeekChatModel: { $in: [null, "", "deepseek-v4-flash"] } },
+      { deepSeekChatModel: { $in: [null, "", "deepseek-v4-flash-260425"] } },
       { qwenEmbeddingBaseUrl: { $in: [null, "", "https://dashscope.aliyuncs.com/compatible-mode/v1"] } },
       { qwenEmbeddingModel: { $in: [null, "", "Qwen3-Embedding"] } }
     ]
@@ -81,7 +81,7 @@ db.model_configs.updateMany(
       deepSeekChatModel: "DeepSeek-V4-flash",
       qwenEmbeddingBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
       qwenEmbeddingModel: "doubao-embedding-vision-251215",
-      qwenEmbeddingDimension: 1024,
+      qwenEmbeddingDimension: 2048,
       updatedAt: new Date()
     }
   }

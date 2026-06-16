@@ -34,6 +34,9 @@ func New(cfg config.Config, store *store.MongoStore, qwen *qwen.Client, vector *
 }
 
 func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primitive.ObjectID) (Retrieval, error) {
+	if len(kbIDs) == 0 {
+		return Retrieval{}, nil
+	}
 	queryVectors, err := s.qwen.Embed(ctx, []string{question})
 	if err != nil {
 		return Retrieval{}, err
@@ -68,7 +71,10 @@ func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primiti
 
 func (s *Service) StreamAnswer(ctx context.Context, question string, retrieval Retrieval, onDelta func(string) error) (string, time.Duration, error) {
 	start := time.Now()
-	system := "你是医院知识库管理平台的智能问答助手。必须优先根据提供的知识库上下文回答；如果上下文不足，明确说明无法从知识库确认，不要编造来源。\n\n知识库上下文：\n" + retrieval.Context
+	system := "你是医院知识库管理平台的智能问答助手。"
+	if strings.TrimSpace(retrieval.Context) != "" {
+		system += "必须优先根据提供的知识库上下文回答；如果上下文不足，明确说明无法从知识库确认，不要编造来源。\n\n知识库上下文：\n" + retrieval.Context
+	}
 	var builder strings.Builder
 	err := s.deepseek.StreamChat(ctx, []deepseek.Message{
 		{Role: "system", Content: system},

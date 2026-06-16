@@ -39,10 +39,10 @@ DEEPSEEK_API_KEY=请在这里填写你的火山引擎方舟密钥
 QWEN_EMBEDDING_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
 QWEN_EMBEDDING_API_KEY=请在这里填写你的火山引擎方舟密钥
 QWEN_EMBEDDING_MODEL=doubao-embedding-vision-251215
-QWEN_EMBEDDING_DIMENSION=1024
+QWEN_EMBEDDING_DIMENSION=2048
 ```
 
-也可以只配置 `VOLCENGINE_API_KEY`，后端会把它作为 DeepSeek 对话和豆包向量模型的默认密钥。启动后也可以在前端顶栏点击“系统设置”打开模型配置弹窗，将火山引擎方舟 Base URL、模型名、API Key 和向量维度保存到 MongoDB。后端执行文档入库、向量生成和流式问答时会优先读取数据库配置；数据库尚未保存时使用上述环境变量作为兜底。
+也可以只配置 `VOLCENGINE_API_KEY`，后端会把它作为 DeepSeek 对话和豆包向量模型的默认密钥。启动后也可以在前端顶栏点击“系统设置”打开模型配置弹窗，将火山引擎方舟 Base URL、模型名、API Key 和向量维度保存到 MongoDB。`doubao-embedding-vision-251215` 固定使用 2048 维。后端执行文档入库、向量生成和流式问答时会优先读取数据库配置；数据库尚未保存时使用上述环境变量作为兜底。
 
 ## 启动依赖服务
 

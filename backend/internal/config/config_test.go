@@ -24,8 +24,8 @@ func TestLoadDefaultsToVolcengineModels(t *testing.T) {
 	if cfg.QwenEmbeddingModel != "doubao-embedding-vision-251215" {
 		t.Fatalf("QwenEmbeddingModel = %q, want doubao-embedding-vision-251215", cfg.QwenEmbeddingModel)
 	}
-	if cfg.QwenEmbeddingDimension != 1024 {
-		t.Fatalf("QwenEmbeddingDimension = %d, want 1024", cfg.QwenEmbeddingDimension)
+	if cfg.QwenEmbeddingDimension != 2048 {
+		t.Fatalf("QwenEmbeddingDimension = %d, want 2048", cfg.QwenEmbeddingDimension)
 	}
 }
 
@@ -41,5 +41,16 @@ func TestLoadUsesVolcengineAPIKeyAsProviderFallback(t *testing.T) {
 	}
 	if cfg.QwenEmbeddingAPIKey != "volcengine-key" {
 		t.Fatalf("QwenEmbeddingAPIKey = %q, want Volcengine API key", cfg.QwenEmbeddingAPIKey)
+	}
+}
+
+func TestLoadCorrectsDoubaoVisionDimension(t *testing.T) {
+	t.Setenv("QWEN_EMBEDDING_MODEL", "doubao-embedding-vision-251215")
+	t.Setenv("QWEN_EMBEDDING_DIMENSION", "1024")
+
+	cfg := Load()
+
+	if cfg.QwenEmbeddingDimension != 2048 {
+		t.Fatalf("QwenEmbeddingDimension = %d, want corrected 2048", cfg.QwenEmbeddingDimension)
 	}
 }

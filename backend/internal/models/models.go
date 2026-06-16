@@ -50,7 +50,8 @@ type Document struct {
 	FileName        string             `bson:"fileName" json:"fileName"`
 	FileType        string             `bson:"fileType" json:"fileType"`
 	SizeBytes       int64              `bson:"sizeBytes" json:"sizeBytes"`
-	StoragePath     string             `bson:"storagePath" json:"storagePath"`
+	Content         []byte             `bson:"content,omitempty" json:"-"`
+	StoragePath     string             `bson:"storagePath,omitempty" json:"storagePath,omitempty"`
 	Status          string             `bson:"status" json:"status"`
 	FailureReason   string             `bson:"failureReason,omitempty" json:"failureReason,omitempty"`
 	CreatedAt       time.Time          `bson:"createdAt" json:"createdAt"`

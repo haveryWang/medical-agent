@@ -1,22 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Alert, Button, Card, Checkbox, Form, Input, Typography } from 'antd';
+import { LockOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [account, setAccount] = useState('admin');
-  const [password, setPassword] = useState('admin123');
-  const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function submit(event) {
-    event.preventDefault();
+  async function submit(values) {
     setLoading(true);
     setError('');
     try {
-      await login(account, password);
+      await login(values.account, values.password);
       navigate('/chat', { replace: true });
     } catch (err) {
       setError(err.message);
@@ -27,40 +25,46 @@ export default function LoginPage() {
 
   return (
     <main className="login-screen">
-      <section className="login-brand">
-        <div className="brand-row">
-          <div className="shield">研</div>
+      <section className="login-identity">
+        <div className="brand-lockup">
+          <span className="brand-mark large">研</span>
           <div>
-            <h1>医院知识库管理平台</h1>
-            <p>构建专业知识体系 · 提升医疗服务质量</p>
+            <Typography.Title level={1}>医院知识库管理平台</Typography.Title>
+            <Typography.Paragraph>面向临床、药学、医保和护理的院内知识问答工作台</Typography.Paragraph>
           </div>
         </div>
-        <div className="hospital-illustration">
-          <div className="building b1" />
-          <div className="building b2" />
-          <div className="building b3" />
-          <div className="trees" />
+        <div className="login-metrics">
+          <div><b>RAG</b><span>知识检索增强</span></div>
+          <div><b>Ark</b><span>火山引擎模型</span></div>
+          <div><b>DB</b><span>配置与数据入库</span></div>
         </div>
       </section>
-      <form className="login-card" onSubmit={submit}>
-        <h2>用户登录</h2>
-        <label className="input-line">
-          <span>👤</span>
-          <input value={account} onChange={(e) => setAccount(e.target.value)} placeholder="请输入账号" />
-        </label>
-        <label className="input-line">
-          <span>🔒</span>
-          <input value={password} type="password" onChange={(e) => setPassword(e.target.value)} placeholder="请输入密码" />
-          <small>∞</small>
-        </label>
-        <label className="remember">
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-          记住我
-        </label>
-        {error && <div className="form-error">{error}</div>}
-        <button className="primary" disabled={loading}>{loading ? '登录中...' : '登录'}</button>
-        <footer>© 2024 医院知识库管理平台 版权所有</footer>
-      </form>
+      <Card className="login-card" variant="borderless">
+        <div className="login-card-title">
+          <SafetyCertificateOutlined />
+          <Typography.Title level={2}>用户登录</Typography.Title>
+        </div>
+        <Form
+          layout="vertical"
+          initialValues={{ account: 'admin', password: 'admin123', remember: true }}
+          onFinish={submit}
+          requiredMark={false}
+        >
+          <Form.Item name="account" label="账号" rules={[{ required: true, message: '请输入账号' }]}>
+            <Input prefix={<UserOutlined />} placeholder="请输入账号" autoComplete="username" />
+          </Form.Item>
+          <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder="请输入密码" autoComplete="current-password" />
+          </Form.Item>
+          <Form.Item name="remember" valuePropName="checked" className="compact-form-item">
+            <Checkbox>记住登录状态</Checkbox>
+          </Form.Item>
+          {error ? <Alert type="error" showIcon message={error} className="login-error" /> : null}
+          <Button type="primary" htmlType="submit" block loading={loading} size="large">
+            登录
+          </Button>
+        </Form>
+      </Card>
     </main>
   );
 }

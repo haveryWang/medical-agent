@@ -8,8 +8,16 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+type DeletedDocumentResult struct {
+	DocumentID      primitive.ObjectID
+	KnowledgeBaseID primitive.ObjectID
+	VectorIDs       []string
+	DeletedChunks   int64
+}
 
 func (s *MongoStore) CreateDocumentAndJob(ctx context.Context, doc models.Document) (models.Document, models.IngestionJob, error) {
 	now := time.Now()
@@ -79,7 +87,10 @@ func (s *MongoStore) FailJob(ctx context.Context, job models.IngestionJob, messa
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Collection("documents").UpdateOne(ctx, bson.M{"_id": job.DocumentID}, bson.M{"$set": bson.M{"status": "failed", "failureReason": message, "updatedAt": now}})
+	if _, err = s.db.Collection("documents").UpdateOne(ctx, bson.M{"_id": job.DocumentID}, bson.M{"$set": bson.M{"status": "failed", "failureReason": message, "updatedAt": now}}); err != nil {
+		return err
+	}
+	_, err = s.db.Collection("knowledge_bases").UpdateOne(ctx, bson.M{"_id": job.KnowledgeBaseID}, bson.M{"$set": bson.M{"buildStatus": "failed", "updatedAt": now}})
 	return err
 }
 
@@ -100,4 +111,102 @@ func (s *MongoStore) GetDocument(ctx context.Context, id primitive.ObjectID) (mo
 	var doc models.Document
 	err := s.db.Collection("documents").FindOne(ctx, bson.M{"_id": id}).Decode(&doc)
 	return doc, err
+}
+
+func (s *MongoStore) ListDocumentChunks(ctx context.Context, documentID primitive.ObjectID) ([]models.Chunk, error) {
+	cursor, err := s.db.Collection("chunks").Find(
+		ctx,
+		bson.M{"documentId": documentID},
+		options.Find().SetSort(bson.D{{Key: "chunkIndex", Value: 1}}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	var chunks []models.Chunk
+	if err := cursor.All(ctx, &chunks); err != nil {
+		return nil, err
+	}
+	return chunks, nil
+}
+
+func (s *MongoStore) DeleteDocumentCascade(ctx context.Context, doc models.Document) (DeletedDocumentResult, error) {
+	chunks, err := s.ListDocumentChunks(ctx, doc.ID)
+	if err != nil {
+		return DeletedDocumentResult{}, err
+	}
+	vectorIDs := make([]string, 0, len(chunks))
+	for _, chunk := range chunks {
+		if chunk.VectorID != "" {
+			vectorIDs = append(vectorIDs, chunk.VectorID)
+		}
+	}
+
+	result := DeletedDocumentResult{
+		DocumentID:      doc.ID,
+		KnowledgeBaseID: doc.KnowledgeBaseID,
+		VectorIDs:       vectorIDs,
+		DeletedChunks:   int64(len(chunks)),
+	}
+	deleteResult, err := s.db.Collection("documents").DeleteOne(ctx, bson.M{"_id": doc.ID, "knowledgeBaseId": doc.KnowledgeBaseID})
+	if err != nil {
+		return DeletedDocumentResult{}, err
+	}
+	if deleteResult.DeletedCount == 0 {
+		return DeletedDocumentResult{}, mongo.ErrNoDocuments
+	}
+	if _, err = s.db.Collection("chunks").DeleteMany(ctx, bson.M{"documentId": doc.ID}); err != nil {
+		return DeletedDocumentResult{}, err
+	}
+	if _, err = s.db.Collection("ingestion_jobs").DeleteMany(ctx, bson.M{"documentId": doc.ID}); err != nil {
+		return DeletedDocumentResult{}, err
+	}
+	if err = s.recountKnowledgeBase(ctx, doc.KnowledgeBaseID); err != nil {
+		return DeletedDocumentResult{}, err
+	}
+	return result, nil
+}
+
+func (s *MongoStore) recountKnowledgeBase(ctx context.Context, knowledgeBaseID primitive.ObjectID) error {
+	docCount, err := s.db.Collection("documents").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID})
+	if err != nil {
+		return err
+	}
+	chunkCount, err := s.db.Collection("chunks").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID})
+	if err != nil {
+		return err
+	}
+	buildStatus, err := s.knowledgeBuildStatus(ctx, knowledgeBaseID)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Collection("knowledge_bases").UpdateOne(
+		ctx,
+		bson.M{"_id": knowledgeBaseID},
+		bson.M{"$set": bson.M{
+			"documentCount": docCount,
+			"chunkCount":    chunkCount,
+			"buildStatus":   buildStatus,
+			"updatedAt":     time.Now(),
+		}},
+	)
+	return err
+}
+
+func (s *MongoStore) knowledgeBuildStatus(ctx context.Context, knowledgeBaseID primitive.ObjectID) (string, error) {
+	pendingJobs, err := s.db.Collection("ingestion_jobs").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID, "status": "pending"})
+	if err != nil {
+		return "", err
+	}
+	if pendingJobs > 0 {
+		return "building", nil
+	}
+	failedDocs, err := s.db.Collection("documents").CountDocuments(ctx, bson.M{"knowledgeBaseId": knowledgeBaseID, "status": "failed"})
+	if err != nil {
+		return "", err
+	}
+	if failedDocs > 0 {
+		return "failed", nil
+	}
+	return "completed", nil
 }
