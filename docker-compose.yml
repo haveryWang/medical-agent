@@ -1,0 +1,26 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: medical-agent-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: medical_agent
+    volumes:
+      - mongo_data:/data/db
+      - ./backend/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: medical-agent-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  mongo_data:
+  qdrant_data:
