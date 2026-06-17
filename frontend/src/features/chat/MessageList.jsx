@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { App, Avatar, Button, Empty, Space, Spin, Tag, Tooltip, Typography } from 'antd';
-import { CopyOutlined, FileSearchOutlined, RedoOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
+import { CopyOutlined, FileSearchOutlined, AppstoreAddOutlined, RedoOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import { formatDuration } from '../../utils/format.js';
+import { messageToReviewDraft } from '../reviewNotes/reviewNotes.js';
 
-export default function MessageList({ loading, messages, onRegenerate, onShowDetail }) {
+export default function MessageList({ loading, messages, onRegenerate, onSendToReview, onShowDetail }) {
   const { message: toast } = App.useApp();
   const bottomRef = useRef(null);
   const latestMessage = messages[messages.length - 1];
@@ -60,6 +61,9 @@ export default function MessageList({ loading, messages, onRegenerate, onShowDet
               <Space size={4} className="message-actions">
                 <Tooltip title="复制内容">
                   <Button size="small" icon={<CopyOutlined />} onClick={() => copy(msg.content)} />
+                </Tooltip>
+                <Tooltip title="添加到复盘笔记">
+                  <Button size="small" icon={<AppstoreAddOutlined />} disabled={!msg.content} onClick={() => onSendToReview(messageToReviewDraft(msg))} />
                 </Tooltip>
                 {isAssistant ? (
                   <Tooltip title="重新生成">

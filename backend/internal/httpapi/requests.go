@@ -21,6 +21,14 @@ type streamMessageRequest struct {
 	KnowledgeBaseIDs []string `json:"knowledgeBaseIds"`
 }
 
+type createReviewNoteRequest struct {
+	Content string `json:"content"`
+}
+
+type exportReviewNotesRequest struct {
+	NoteIDs []string `json:"noteIds"`
+}
+
 type saveModelConfigRequest struct {
 	DeepSeekBaseURL        string `json:"deepSeekBaseUrl"`
 	DeepSeekAPIKey         string `json:"deepSeekAPIKey"`

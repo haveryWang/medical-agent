@@ -91,6 +91,19 @@ backend/scripts/mongo-init.js
 
 后端启动时也会自动调用 `EnsureIndexes` 创建索引，并在空库时插入演示账号和知识库数据。
 
+复盘笔记和政策文件库使用独立集合：
+
+```text
+review_notes
+review_note_exports
+policy_documents
+policy_import_batches
+```
+
+这些集合不会进入知识库文档入库、chunk 生成或 Qdrant 向量索引。
+
+复盘笔记列表使用服务端分页；生成文档时只导出前端选中的记录，并在 `review_note_exports.content` 保存 Markdown 快照。后台最多保留最近 5 条导出文档，删除原始复盘记录不会影响已生成文档的再次下载。政策文件库支持删除单条 `policy_documents` 记录。
+
 Qdrant collection 初始化脚本：
 
 ```text
@@ -106,6 +119,8 @@ backend/
   internal/httpapi/router.go      # chi 路由、CORS、中间件挂载
   internal/httpapi/middleware.go  # 请求 ID、登录态、权限校验
   internal/httpapi/*_handlers.go  # auth、knowledge、ingestion、chat、health handlers
+  internal/policy/                 # 政策固定分类和 Excel 导入解析
+  internal/reviewnotes/            # 复盘笔记 Markdown 导出工具
   internal/httpapi/requests.go    # 请求 DTO
   internal/httpapi/response.go    # JSON/SSE 响应工具
   internal/store/mongo.go         # Mongo 连接、索引、公共类型
@@ -119,3 +134,13 @@ backend/
 ```
 
 `POST /api/v1/knowledge-bases`、`PATCH /api/v1/knowledge-bases/{id}`、文档上传和任务重试现在通过后端权限中间件校验 `knowledge:write`。消息详情接口会校验消息所属会话是否属于当前用户。
+
+## 复盘笔记和政策文件库
+
+- 复盘笔记创建与 Markdown 导出需要 `review_notes:write` 权限。
+- 政策库 Excel 导入需要 `policy:write` 权限。
+- 默认空库管理员账号已包含上述权限。
+- 复盘笔记导出接口会把当前未导出记录合并为 Markdown，并将这些记录标记为已导出。
+- 政策库导入仅支持 `.xlsx`，导入模板表头为标题、摘要、解读、日期、分类标签；后端兼容标题、摘要、日期、分类字段，并可读取可选解读字段。
+- 政策列表接口返回分类和月份聚合，可通过 `category` 与 `date` 参数筛选。
+- 支持的政策分类固定为：国家医学中心、科技创新、医疗服务、医保医药、数智治理、改革监管、其他。

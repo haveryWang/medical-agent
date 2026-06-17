@@ -132,10 +132,13 @@ func chunkDocument(text, documentTitle string, maxLen int) []chunkPart {
 			flushParagraph()
 			continue
 		}
-		if heading := detectHeading(line); heading != "" {
+		if heading := detectHeading(line); heading != "" && (paragraph.Len() == 0 || isForcedSectionHeading(line)) {
 			flushParagraph()
 			currentSection = heading
 			continue
+		}
+		if paragraph.Len() > 0 && lenRunes(paragraph.String())+1+lenRunes(line) > maxLen {
+			flushParagraph()
 		}
 		if paragraph.Len() > 0 {
 			paragraph.WriteByte(' ')
@@ -309,7 +312,7 @@ func detectHeading(line string) string {
 		return strings.TrimSpace(line)
 	}
 	if matches := headingLineRe.FindStringSubmatch(line); len(matches) == 2 {
-		if len([]rune(line)) <= 48 {
+		if len([]rune(line)) <= 48 && isGeneratedSectionHeading(line) {
 			return line
 		}
 	}
@@ -319,6 +322,16 @@ func detectHeading(line string) string {
 	return ""
 }
 
+func isForcedSectionHeading(line string) bool {
+	line = strings.TrimSpace(line)
+	return strings.HasPrefix(line, "#") || isGeneratedSectionHeading(line)
+}
+
+func isGeneratedSectionHeading(line string) bool {
+	line = strings.TrimSpace(line)
+	return strings.HasPrefix(line, "工作表:") || strings.HasPrefix(line, "工作表：")
+}
+
 func looksLikeStandaloneHeading(line string) bool {
 	if len([]rune(line)) > 32 || endsWithSentencePunctuation(line) {
 		return false
@@ -326,7 +339,26 @@ func looksLikeStandaloneHeading(line string) bool {
 	if strings.ContainsAny(line, " \t") {
 		return false
 	}
+	if containsDigitOrASCII(line) {
+		return false
+	}
+	if containsClausePunctuation(line) {
+		return false
+	}
 	return true
+}
+
+func containsDigitOrASCII(text string) bool {
+	for _, r := range text {
+		if isASCIIAlphaNum(r) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsClausePunctuation(text string) bool {
+	return strings.ContainsAny(text, "：:（）()、，,；;")
 }
 
 func endsWithSentencePunctuation(line string) bool {

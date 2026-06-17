@@ -1,4 +1,5 @@
 import { Drawer, Layout, Typography } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import AnswerDetail from '../features/chat/AnswerDetail.jsx';
 import ChatComposer from '../features/chat/ChatComposer.jsx';
 import ConversationList from '../features/chat/ConversationList.jsx';
@@ -9,6 +10,11 @@ const { Sider, Content } = Layout;
 
 export default function ChatPage() {
   const chat = useChatWorkspace();
+  const navigate = useNavigate();
+
+  function sendToReview(draft) {
+    navigate(`/review-notes?draft=${encodeURIComponent(draft)}`);
+  }
 
   return (
     <Layout className="chat-layout">
@@ -41,6 +47,7 @@ export default function ChatPage() {
           loading={chat.loadingMessages}
           messages={chat.messages}
           onRegenerate={chat.regenerate}
+          onSendToReview={sendToReview}
           onShowDetail={chat.showDetail}
         />
         <ChatComposer input={chat.input} setInput={chat.setInput} streaming={chat.streaming} onSend={chat.send} />

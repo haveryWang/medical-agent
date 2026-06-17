@@ -22,25 +22,29 @@ export function createApiClient({ getToken, onUnauthorized } = {}) {
     return response.json();
   }
 
-  async function download(path, filename) {
+  async function download(path, filename, options = {}) {
     const headers = new Headers();
+    if (options.body) headers.set('Content-Type', 'application/json');
     const token = getToken?.();
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    const response = await fetch(`${API_BASE}${path}`, { headers });
+    const response = await fetch(`${API_BASE}${path}`, { method: options.method || 'GET', headers, body: options.body });
     if (response.status === 401) onUnauthorized?.();
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(body?.error?.message || `下载失败: ${response.status}`);
     }
     const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || response.headers.get('content-disposition') || '';
+    const resolvedFilename = filename || filenameFromDisposition(disposition) || 'download';
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename || 'download';
+    link.download = resolvedFilename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    return { filename: resolvedFilename };
   }
 
   async function streamConversationMessage(conversationId, payload, onEvent) {
@@ -79,6 +83,22 @@ export function createApiClient({ getToken, onUnauthorized } = {}) {
     listDocumentChunks: (kbId, docId) => request(`/knowledge-bases/${kbId}/documents/${docId}/chunks`),
     downloadDocument: (kbId, doc) => download(`/knowledge-bases/${kbId}/documents/${doc.id}/download`, doc.fileName),
     deleteDocument: (kbId, docId) => request(`/knowledge-bases/${kbId}/documents/${docId}`, { method: 'DELETE' }),
+    listReviewNotes: (params = {}) => request(`/review-notes?${new URLSearchParams(params)}`),
+    createReviewNote: (payload) => request('/review-notes', { method: 'POST', body: JSON.stringify(payload) }),
+    reviewNoteCounts: () => request('/review-notes/counts'),
+    exportReviewNotes: (noteIds = []) => download('/review-notes:export', undefined, { method: 'POST', body: JSON.stringify({ noteIds }) }),
+    deleteReviewNote: (id) => request(`/review-notes/${id}`, { method: 'DELETE' }),
+    listReviewNoteExports: (params = {}) => request(`/review-notes/exports?${new URLSearchParams(params)}`),
+    downloadReviewNoteExport: (id, filename) => download(`/review-notes/exports/${id}/download`, filename),
+    listPolicyCategories: () => request('/policies/categories'),
+    listPolicies: (params = {}) => request(`/policies?${new URLSearchParams(params)}`),
+    deletePolicy: (id) => request(`/policies/${id}`, { method: 'DELETE' }),
+    downloadPolicyTemplate: () => download('/policies/import-template', '政策文件库导入模板.xlsx'),
+    importPolicies: (file) => {
+      const form = new FormData();
+      form.append('file', file);
+      return request('/policies:import', { method: 'POST', body: form, headers: {} });
+    },
     listConversations: (keyword = '') => request(`/conversations?${new URLSearchParams({ keyword })}`),
     createConversation: (payload) => request('/conversations', { method: 'POST', body: JSON.stringify(payload) }),
     updateConversation: (id, payload) => request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
@@ -89,4 +109,17 @@ export function createApiClient({ getToken, onUnauthorized } = {}) {
     saveModelConfig: (payload) => request('/system/model-config', { method: 'PATCH', body: JSON.stringify(payload) }),
     streamConversationMessage,
   };
+}
+
+function filenameFromDisposition(disposition) {
+  const utf8 = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      return utf8[1];
+    }
+  }
+  const ascii = disposition.match(/filename="?([^";]+)"?/i);
+  return ascii?.[1] || '';
 }

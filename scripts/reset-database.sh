@@ -35,6 +35,10 @@ db.ingestion_jobs.deleteMany({});
 db.conversations.deleteMany({});
 db.messages.deleteMany({});
 db.audit_logs.deleteMany({});
+db.review_notes.deleteMany({});
+db.review_note_exports.deleteMany({});
+db.policy_documents.deleteMany({});
+db.policy_import_batches.deleteMany({});
 db.model_configs.deleteMany({});
 db.users.deleteMany({ account: { $ne: "admin" } });
 
@@ -47,7 +51,7 @@ if (admin) {
         passwordHash: adminHash,
         displayName: "系统管理员",
         roles: ["系统管理员", "知识库管理员"],
-        permissions: ["chat:use", "knowledge:read", "knowledge:write", "system:read"],
+        permissions: ["chat:use", "knowledge:read", "knowledge:write", "review_notes:write", "policy:write", "system:read"],
         status: "active",
         updatedAt: now
       },
@@ -61,7 +65,7 @@ if (admin) {
     passwordHash: adminHash,
     displayName: "系统管理员",
     roles: ["系统管理员", "知识库管理员"],
-    permissions: ["chat:use", "knowledge:read", "knowledge:write", "system:read"],
+    permissions: ["chat:use", "knowledge:read", "knowledge:write", "review_notes:write", "policy:write", "system:read"],
     status: "active",
     createdAt: now,
     updatedAt: now
@@ -74,6 +78,10 @@ printjson({
   knowledge_bases: db.knowledge_bases.countDocuments({}),
   documents: db.documents.countDocuments({}),
   chunks: db.chunks.countDocuments({}),
+  review_notes: db.review_notes.countDocuments({}),
+  review_note_exports: db.review_note_exports.countDocuments({}),
+  policy_documents: db.policy_documents.countDocuments({}),
+  policy_import_batches: db.policy_import_batches.countDocuments({}),
   conversations: db.conversations.countDocuments({}),
   messages: db.messages.countDocuments({})
 });
