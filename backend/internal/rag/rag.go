@@ -71,7 +71,7 @@ func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primiti
 
 func (s *Service) StreamAnswer(ctx context.Context, question string, retrieval Retrieval, onDelta func(string) error) (string, time.Duration, error) {
 	start := time.Now()
-	system := "你是医院知识库管理平台的智能问答助手。"
+	system := "你是医院行政智策平台的智能问答助手。"
 	if strings.TrimSpace(retrieval.Context) != "" {
 		system += "必须优先根据提供的知识库上下文回答；如果上下文不足，明确说明无法从知识库确认，不要编造来源。\n\n知识库上下文：\n" + retrieval.Context
 	}

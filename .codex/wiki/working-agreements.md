@@ -19,6 +19,11 @@
 - When a tech stack is introduced, record setup and verification commands here.
 - Prefer focused tests for narrow behavior and broader tests for shared
   contracts or user-facing workflows.
+- Any API contract change MUST update the backend implementation, frontend API
+  client or callers, and related API documentation together.
+- Any new logic that stores, reads, or changes persistent data MUST integrate
+  with the real database layer. Do not satisfy persistent-data behavior with mock
+  data, static fixtures, or frontend-only placeholders outside tests.
 
 ## Git Hygiene
 

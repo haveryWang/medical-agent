@@ -23,7 +23,7 @@ export default function Shell({ children }) {
         <div className="top-brand">
           <span className="brand-mark">研</span>
           <div>
-            <b>医院知识库管理平台</b>
+            <b>医院行政智策平台v1.0</b>
           </div>
         </div>
         <Space size={8} className="top-actions">

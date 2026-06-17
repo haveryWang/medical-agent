@@ -29,7 +29,7 @@ export default function LoginPage() {
         <div className="brand-lockup">
           <span className="brand-mark large">研</span>
           <div>
-            <Typography.Title level={1}>医院知识库管理平台</Typography.Title>
+            <Typography.Title level={1}>医院行政智策平台v1.0</Typography.Title>
             <Typography.Paragraph>面向临床、药学、医保和护理的院内知识问答工作台</Typography.Paragraph>
           </div>
         </div>

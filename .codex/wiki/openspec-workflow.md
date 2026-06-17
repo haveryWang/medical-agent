@@ -23,4 +23,5 @@ Project-local OpenSpec skills are available under `.codex/skills/`:
 
 ## Current Baseline
 
-No accepted specs or active changes are present yet.
+Accepted specs are present under `openspec/specs/`. Completed changes are
+archived under `openspec/changes/archive/`.

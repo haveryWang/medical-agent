@@ -4,7 +4,7 @@ The repository is currently an early-stage project with OpenSpec scaffolding, Co
 
 The design image describes:
 
-- Login page branded as "医院知识库管理平台".
+- Login page branded as "医院行政智策平台".
 - Main chat workspace with conversation list, new conversation action, search, message area, streaming-style answer display, message actions, answer detail drawer, cited knowledge references, retrieval strategy, and prompt context preview.
 - Knowledge-base management page with sidebar navigation, filters, list table, upload action, document upload panel, supported file types, and uploaded file statuses.
 - System requirements for RAG-based intelligent Q&A, user roles, chat management, knowledge-base maintenance, vector retrieval, DeepSeek integration, security, and file format support.
