@@ -116,6 +116,23 @@ func (s *MongoStore) EnsureIndexes(ctx context.Context) error {
 			{Keys: bson.D{{Key: "actorId", Value: 1}, {Key: "createdAt", Value: -1}}},
 			{Keys: bson.D{{Key: "action", Value: 1}}},
 		},
+		"review_notes": {
+			{Keys: bson.D{{Key: "actorId", Value: 1}, {Key: "createdAt", Value: -1}}},
+			{Keys: bson.D{{Key: "exported", Value: 1}, {Key: "createdAt", Value: 1}}},
+			{Keys: bson.D{{Key: "exportBatchId", Value: 1}}},
+		},
+		"review_note_exports": {
+			{Keys: bson.D{{Key: "actorId", Value: 1}, {Key: "createdAt", Value: -1}}},
+		},
+		"policy_documents": {
+			{Keys: bson.D{{Key: "category", Value: 1}, {Key: "date", Value: -1}}},
+			{Keys: bson.D{{Key: "title", Value: "text"}, {Key: "summary", Value: "text"}}},
+			{Keys: bson.D{{Key: "importBatchId", Value: 1}}},
+			{Keys: bson.D{{Key: "rowChecksum", Value: 1}}},
+		},
+		"policy_import_batches": {
+			{Keys: bson.D{{Key: "actorId", Value: 1}, {Key: "createdAt", Value: -1}}},
+		},
 		"model_configs": {
 			{Keys: bson.D{{Key: "updatedAt", Value: -1}}},
 			{Keys: bson.D{{Key: "deepSeekChatModel", Value: 1}}},

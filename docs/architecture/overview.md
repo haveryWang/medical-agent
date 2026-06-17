@@ -9,6 +9,8 @@ This document records the implemented architecture for the medical knowledge-bas
 - Login and session management.
 - Agent conversation workspace with streaming answers.
 - Knowledge-base management with list, filters, document upload, and indexing status.
+- Review notes for isolated fragmented experience capture and Markdown export.
+- Policy library for curated Excel policy browsing by fixed categories.
 - RAG ingestion and retrieval pipeline.
 - Documentation and task execution records.
 
@@ -52,6 +54,15 @@ MongoDB stores users, sessions, roles, conversations, messages, knowledge bases,
 
 Qdrant stores embedding vectors and searchable payload fields. MongoDB remains canonical for source text, metadata, permissions, and audit records.
 
+Review notes and policy library data are physically isolated from the RAG knowledge-base pipeline:
+
+- `review_notes` stores fragmented experience records with actor, timestamps, and export state.
+- `review_note_exports` stores Markdown export batch metadata and included note ids.
+- `policy_documents` stores curated policy display records with title, summary, date, category, import batch id, and row checksum.
+- `policy_import_batches` stores Excel import results and row-level validation errors.
+
+These collections do not create `documents`, `chunks`, `ingestion_jobs`, or Qdrant points. Chat retrieval continues to read only accepted knowledge-base chunks and vector results unless a future accepted capability changes that behavior.
+
 Secrets such as `DEEPSEEK_API_KEY` and `QWEN_EMBEDDING_API_KEY` must not be stored in source code or returned to the frontend. Operators can save provider API keys and model names through the system settings modal; backend ingestion and chat execution reads the effective values from MongoDB and falls back to environment variables when no database value exists.
 
 ## Design Source
@@ -66,6 +77,8 @@ The initial UI and product scope come from `design.png` and the OpenSpec change 
 - `backend/internal/httpapi/middleware.go`: request ID, auth, permission middleware.
 - `backend/internal/store/mongo.go`: MongoDB connection, indexes, shared store types.
 - `backend/internal/store/*.go`: Mongo repositories split by auth, chat, knowledge, ingestion, RAG, audit, seed data.
+- `backend/internal/policy/`: fixed policy categories and Excel import parsing.
+- `backend/internal/reviewnotes/`: Markdown rendering and export filename helpers.
 - `backend/internal/providers/deepseek/deepseek.go`: DeepSeek chat streaming adapter.
 - `backend/internal/providers/qwen/qwen.go`: Qwen3-Embedding adapter and local deterministic demo fallback.
 - `backend/internal/vector/qdrant.go`: Qdrant collection, upsert, and search adapter.
@@ -76,6 +89,8 @@ The initial UI and product scope come from `design.png` and the OpenSpec change 
 - `frontend/src/contexts/AuthContext.jsx`: session state and auth API integration.
 - `frontend/src/features/chat/`: conversation list, messages, composer, answer detail, streaming hook.
 - `frontend/src/features/knowledge/`: filters, table, upload panel, workspace hook.
+- `frontend/src/features/reviewNotes/`: review-note threshold, workspace hook, and export state.
+- `frontend/src/features/policyLibrary/`: fixed categories, import validation, and policy-library workspace hook.
 - `frontend/src/styles.css`: design-image-matched UI styles.
 - `backend/scripts/mongo-init.js`: MongoDB collection and index initialization.
 - `backend/scripts/qdrant-init.sh`: Qdrant collection initialization.

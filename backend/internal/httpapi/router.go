@@ -17,7 +17,7 @@ func (api *API) Router() http.Handler {
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Request-Id"},
-		ExposedHeaders:   []string{"X-Request-Id"},
+		ExposedHeaders:   []string{"X-Request-Id", "Content-Disposition"},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
@@ -46,6 +46,20 @@ func (api *API) Router() http.Handler {
 
 			r.Get("/ingestion-jobs/{id}", api.getIngestionJob)
 			r.With(api.requirePermission("knowledge:write")).Post("/ingestion-jobs/{id}:retry", api.retryIngestionJob)
+
+			r.Get("/review-notes", api.listReviewNotes)
+			r.Get("/review-notes/counts", api.reviewNoteCounts)
+			r.Get("/review-notes/exports", api.listReviewNoteExports)
+			r.Get("/review-notes/exports/{id}/download", api.downloadReviewNoteExport)
+			r.With(api.requirePermission("review_notes:write")).Post("/review-notes", api.createReviewNote)
+			r.With(api.requirePermission("review_notes:write")).Delete("/review-notes/{id}", api.deleteReviewNote)
+			r.With(api.requirePermission("review_notes:write")).Post("/review-notes:export", api.exportReviewNotes)
+
+			r.Get("/policies/categories", api.policyCategories)
+			r.Get("/policies", api.listPolicies)
+			r.With(api.requirePermission("policy:write")).Delete("/policies/{id}", api.deletePolicy)
+			r.Get("/policies/import-template", api.downloadPolicyImportTemplate)
+			r.With(api.requirePermission("policy:write")).Post("/policies:import", api.importPolicies)
 
 			r.Get("/conversations", api.listConversations)
 			r.Post("/conversations", api.createConversation)

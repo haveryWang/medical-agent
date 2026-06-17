@@ -55,6 +55,44 @@ func TestChunkDocumentKeepsShortRowsUnderExplicitSection(t *testing.T) {
 	}
 }
 
+func TestChunkDocumentPreservesShortChineseListItems(t *testing.T) {
+	text := strings.Join([]string{
+		"会场保障",
+		"提前15分钟到，叮嘱会务至少提前30分钟开设备空调",
+		"设备调试：话筒声音、PPT、211自开设备",
+		"第一排矿水",
+		"会议时间地点更改：及时通知调研团内的领导们（7人）",
+		"电梯的选择偏好：16号楼电梯10梯，8号楼13梯（因侧面提车），20号楼3楼通到21号楼，20号楼外面1-3梯（1梯到6楼检验科），里面4-6梯（到高层）",
+		"保卫保障：停车偏好11号楼侧面",
+		"与部门负责人沟通",
+		"初次沟通：了解到场人员数量、“雷点”",
+		"业务科室联系建议询问主任科室对接人",
+		"临时变更时的沟通方式",
+	}, "\n")
+
+	chunks := chunkDocument(text, "陪同经验总结.docx", 200)
+	if len(chunks) < 2 {
+		t.Fatalf("expected Chinese list items to split across multiple chunks, got %#v", chunks)
+	}
+	allText := ""
+	for _, chunk := range chunks {
+		allText += chunk.Text + "\n"
+	}
+
+	for _, wanted := range []string{
+		"提前15分钟到，叮嘱会务至少提前30分钟开设备空调",
+		"设备调试：话筒声音、PPT、211自开设备",
+		"第一排矿水",
+		"会议时间地点更改：及时通知调研团内的领导们（7人）",
+		"保卫保障：停车偏好11号楼侧面",
+		"业务科室联系建议询问主任科室对接人",
+	} {
+		if !strings.Contains(allText, wanted) {
+			t.Fatalf("expected chunk text to preserve %q, got %#v", wanted, chunks)
+		}
+	}
+}
+
 func TestChunkDocumentCapsVeryLongSentenceAtHardLimit(t *testing.T) {
 	chunks := chunkDocument(strings.Repeat("长", 620)+"。"+"短句。", "长文档.txt", 200)
 

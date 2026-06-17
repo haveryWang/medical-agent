@@ -1,4 +1,4 @@
-# 医院知识库管理平台
+# 医院行政智策平台
 
 这是一个基于 RAG 技术的医院知识库对话系统，包含：
 
@@ -34,6 +34,8 @@ docs/runbooks/docker和数据库查看.md
 ```bash
 sh scripts/reset-database.sh
 ```
+
+该脚本会清空知识库、会话、复盘记录、政策文件库等业务集合，并重建 Qdrant collection。
 
 ## 默认账号
 

@@ -126,6 +126,52 @@ type AuditLog struct {
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
 }
 
+type ReviewNote struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	ActorID       primitive.ObjectID `bson:"actorId" json:"actorId"`
+	Content       string             `bson:"content" json:"content"`
+	Exported      bool               `bson:"exported" json:"exported"`
+	ExportBatchID primitive.ObjectID `bson:"exportBatchId,omitempty" json:"exportBatchId,omitempty"`
+	CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
+	ExportedAt    *time.Time         `bson:"exportedAt,omitempty" json:"exportedAt,omitempty"`
+}
+
+type ReviewNoteExport struct {
+	ID        primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	ActorID   primitive.ObjectID   `bson:"actorId" json:"actorId"`
+	NoteIDs   []primitive.ObjectID `bson:"noteIds" json:"noteIds"`
+	NoteCount int                  `bson:"noteCount" json:"noteCount"`
+	Filename  string               `bson:"filename" json:"filename"`
+	Content   string               `bson:"content,omitempty" json:"-"`
+	CreatedAt time.Time            `bson:"createdAt" json:"createdAt"`
+}
+
+type PolicyDocument struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Title          string             `bson:"title" json:"title"`
+	Summary        string             `bson:"summary" json:"summary"`
+	Interpretation string             `bson:"interpretation,omitempty" json:"interpretation,omitempty"`
+	Date           string             `bson:"date" json:"date"`
+	Category       string             `bson:"category" json:"category"`
+	Source         string             `bson:"source,omitempty" json:"source,omitempty"`
+	Issuer         string             `bson:"issuer,omitempty" json:"issuer,omitempty"`
+	ImportBatchID  primitive.ObjectID `bson:"importBatchId,omitempty" json:"importBatchId,omitempty"`
+	RowChecksum    string             `bson:"rowChecksum,omitempty" json:"rowChecksum,omitempty"`
+	CreatedAt      time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt      time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+type PolicyImportBatch struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	ActorID   primitive.ObjectID `bson:"actorId" json:"actorId"`
+	Filename  string             `bson:"filename" json:"filename"`
+	Imported  int                `bson:"imported" json:"imported"`
+	Skipped   int                `bson:"skipped" json:"skipped"`
+	Errors    []string           `bson:"errors" json:"errors"`
+	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
+}
+
 type ModelConfig struct {
 	ID                     primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	DeepSeekBaseURL        string             `bson:"deepSeekBaseUrl" json:"deepSeekBaseUrl"`

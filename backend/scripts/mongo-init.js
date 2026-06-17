@@ -10,6 +10,10 @@ db.createCollection("ingestion_jobs");
 db.createCollection("conversations");
 db.createCollection("messages");
 db.createCollection("audit_logs");
+db.createCollection("review_notes");
+db.createCollection("review_note_exports");
+db.createCollection("policy_documents");
+db.createCollection("policy_import_batches");
 db.createCollection("model_configs");
 
 db.users.createIndex({ account: 1 }, { unique: true });
@@ -46,6 +50,19 @@ db.messages.createIndex({ role: 1 });
 
 db.audit_logs.createIndex({ actorId: 1, createdAt: -1 });
 db.audit_logs.createIndex({ action: 1 });
+
+db.review_notes.createIndex({ actorId: 1, createdAt: -1 });
+db.review_notes.createIndex({ exported: 1, createdAt: 1 });
+db.review_notes.createIndex({ exportBatchId: 1 });
+
+db.review_note_exports.createIndex({ actorId: 1, createdAt: -1 });
+
+db.policy_documents.createIndex({ category: 1, date: -1 });
+db.policy_documents.createIndex({ title: "text", summary: "text" });
+db.policy_documents.createIndex({ importBatchId: 1 });
+db.policy_documents.createIndex({ rowChecksum: 1 });
+
+db.policy_import_batches.createIndex({ actorId: 1, createdAt: -1 });
 
 db.model_configs.createIndex({ updatedAt: -1 });
 db.model_configs.createIndex({ deepSeekChatModel: 1 });
