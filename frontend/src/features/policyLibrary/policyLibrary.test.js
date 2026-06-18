@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   POLICY_CATEGORIES,
+  POLICY_FILTER_DEBOUNCE_MS,
+  POLICY_TEXT_ELLIPSIS,
   POLICY_TEMPLATE_FILENAME,
   buildPolicyListParams,
   filterPoliciesByCategory,
@@ -9,8 +11,17 @@ import {
   preparePolicyImportFile,
 } from './policyLibrary.js';
 
-test('POLICY_CATEGORIES contains the seven fixed categories in display order', () => {
-  assert.deepEqual(POLICY_CATEGORIES, ['国家医学中心', '科技创新', '医疗服务', '医保医药', '数智治理', '改革监管', '其他']);
+test('POLICY_CATEGORIES contains the eight fixed categories in display order', () => {
+  assert.deepEqual(POLICY_CATEGORIES, ['国家医学中心', '科技创新', '医疗服务', '医保医药', '数智治理', '改革监管', '国际合作', '其他']);
+});
+
+test('POLICY_TEXT_ELLIPSIS keeps long policy slices expandable', () => {
+  assert.equal(POLICY_TEXT_ELLIPSIS.expandable, true);
+  assert.equal(POLICY_TEXT_ELLIPSIS.symbol, '展开全部');
+});
+
+test('POLICY_FILTER_DEBOUNCE_MS delays keyword filter requests', () => {
+  assert.equal(POLICY_FILTER_DEBOUNCE_MS, 400);
 });
 
 test('filterPoliciesByCategory returns only selected category records', () => {
@@ -33,13 +44,15 @@ test('policy import template filename makes the expected Excel contract visible'
 });
 
 test('buildPolicyListParams includes category and month filters when selected', () => {
-  assert.deepEqual(buildPolicyListParams({ category: '医保医药', date: '2026-06', page: 2, pageSize: 10 }), {
+  assert.deepEqual(buildPolicyListParams({ category: '医保医药', date: '2026-06', keyword: '医学中心', page: 2, pageSize: 10 }), {
     category: '医保医药',
     date: '2026-06',
+    keyword: '医学中心',
     page: 2,
     size: 10,
   });
   assert.deepEqual(buildPolicyListParams({ category: '', date: '' }), {});
+  assert.deepEqual(buildPolicyListParams({ keyword: '  医学中心  ' }), { keyword: '医学中心' });
 });
 
 test('normalizePolicyFacets keeps fixed categories and date counts usable for filters', () => {

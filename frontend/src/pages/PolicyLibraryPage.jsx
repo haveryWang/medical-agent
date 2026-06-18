@@ -1,6 +1,7 @@
-import { Button, Empty, List, Pagination, Popconfirm, Select, Space, Tag, Typography, Upload } from 'antd';
-import { DeleteOutlined, DownloadOutlined, InboxOutlined, ReloadOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Empty, Input, List, Pagination, Popconfirm, Select, Space, Tag, Typography, Upload } from 'antd';
+import { DeleteOutlined, DownloadOutlined, InboxOutlined, ReloadOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { usePolicyLibraryWorkspace } from '../features/policyLibrary/usePolicyLibraryWorkspace.js';
+import { POLICY_TEXT_ELLIPSIS } from '../features/policyLibrary/policyLibrary.js';
 
 export default function PolicyLibraryPage() {
   const workspace = usePolicyLibraryWorkspace();
@@ -19,7 +20,7 @@ export default function PolicyLibraryPage() {
           >
             下载导入模板
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={() => workspace.load()} loading={workspace.loading}>
+          <Button icon={<ReloadOutlined />} onClick={() => workspace.refresh()} loading={workspace.loading}>
             刷新
           </Button>
           {workspace.canImport ? (
@@ -59,6 +60,14 @@ export default function PolicyLibraryPage() {
           <div className="policy-filter-bar">
             <Space size={10} wrap>
               <Typography.Text type="secondary">聚合筛选</Typography.Text>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="按名称搜索"
+                value={workspace.keyword}
+                onChange={(event) => workspace.setKeyword(event.target.value)}
+                className="policy-keyword-input"
+              />
               <Select
                 allowClear
                 placeholder="按日期"
@@ -107,11 +116,11 @@ export default function PolicyLibraryPage() {
                     <span>{item.date || '未标注日期'}</span>
                   </Space>
                   <Typography.Title level={4}>{item.title}</Typography.Title>
-                  <Typography.Paragraph ellipsis={{ rows: 3, expandable: false }}>
+                  <Typography.Paragraph ellipsis={POLICY_TEXT_ELLIPSIS}>
                     {item.summary}
                   </Typography.Paragraph>
                   {item.interpretation ? (
-                    <Typography.Paragraph className="policy-interpretation" ellipsis={{ rows: 2, expandable: false }}>
+                    <Typography.Paragraph className="policy-interpretation" ellipsis={POLICY_TEXT_ELLIPSIS}>
                       {item.interpretation}
                     </Typography.Paragraph>
                   ) : null}

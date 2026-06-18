@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"medical-agent/backend/internal/models"
@@ -20,7 +21,7 @@ type ImportReport struct {
 	Errors   []string `json:"errors"`
 }
 
-var fixedCategories = []string{"国家医学中心", "科技创新", "医疗服务", "医保医药", "数智治理", "改革监管", "其他"}
+var fixedCategories = []string{"国家医学中心", "科技创新", "医疗服务", "医保医药", "数智治理", "改革监管", "国际合作", "其他"}
 
 func Categories() []string {
 	return append([]string(nil), fixedCategories...)
@@ -71,7 +72,7 @@ func ParseExcel(filename string, data []byte) ([]models.PolicyDocument, ImportRe
 			Title:          cell(row, columns.title),
 			Summary:        cell(row, columns.summary),
 			Interpretation: cell(row, columns.interpretation),
-			Date:           normalizeDate(cell(row, columns.date)),
+			Date:           policyDateCell(file, sheets[0], rowNumber, columns.date, cell(row, columns.date)),
 			Category:       cell(row, columns.category),
 		}
 		if strings.TrimSpace(record.Title) == "" || strings.TrimSpace(record.Summary) == "" || strings.TrimSpace(record.Date) == "" || strings.TrimSpace(record.Category) == "" {
@@ -199,7 +200,110 @@ func cell(row []string, index int) string {
 }
 
 func normalizeDate(value string) string {
-	return strings.TrimSpace(strings.TrimSuffix(value, " 00:00:00"))
+	value = strings.TrimSpace(strings.TrimSuffix(value, " 00:00:00"))
+	if parsed, ok := parsePolicyDateText(value); ok {
+		return parsed
+	}
+	return value
+}
+
+func policyDateCell(file *excelize.File, sheet string, rowNumber int, columnIndex int, fallback string) string {
+	cellName, err := excelize.CoordinatesToCellName(columnIndex+1, rowNumber)
+	if err != nil {
+		return normalizeDate(fallback)
+	}
+	raw, err := file.GetCellValue(sheet, cellName, excelize.Options{RawCellValue: true})
+	if err == nil && raw != "" && isDateCell(file, sheet, cellName) {
+		if serial, err := strconv.ParseFloat(raw, 64); err == nil {
+			use1904Format := false
+			if props, err := file.GetWorkbookProps(); err == nil && props.Date1904 != nil {
+				use1904Format = *props.Date1904
+			}
+			if parsed, err := excelize.ExcelDateToTime(serial, use1904Format); err == nil {
+				return parsed.Format("2006-01-02")
+			}
+		}
+	}
+	if raw != "" {
+		if parsed, ok := parsePolicyDateText(raw); ok {
+			return parsed
+		}
+	}
+	return normalizeDate(fallback)
+}
+
+func isDateCell(file *excelize.File, sheet string, cellName string) bool {
+	styleID, err := file.GetCellStyle(sheet, cellName)
+	if err != nil {
+		return false
+	}
+	style, err := file.GetStyle(styleID)
+	if err != nil || style == nil {
+		return false
+	}
+	if isBuiltInDateNumFmt(style.NumFmt) {
+		return true
+	}
+	if style.CustomNumFmt == nil {
+		return false
+	}
+	format := strings.ToLower(*style.CustomNumFmt)
+	return strings.Contains(format, "y") && strings.Contains(format, "d")
+}
+
+func isBuiltInDateNumFmt(numFmt int) bool {
+	if numFmt >= 14 && numFmt <= 17 {
+		return true
+	}
+	if numFmt == 22 {
+		return true
+	}
+	if numFmt >= 27 && numFmt <= 36 {
+		return true
+	}
+	return numFmt >= 50 && numFmt <= 58
+}
+
+func parsePolicyDateText(value string) (string, bool) {
+	value = strings.TrimSpace(strings.TrimSuffix(value, " 00:00:00"))
+	if value == "" {
+		return "", false
+	}
+	value = strings.Fields(value)[0]
+	normalized := strings.NewReplacer("/", "-", ".", "-", "年", "-", "月", "-", "日", "").Replace(value)
+	normalized = strings.TrimSuffix(normalized, "-")
+	if len(normalized) == 8 && allDigits(normalized) {
+		normalized = normalized[:4] + "-" + normalized[4:6] + "-" + normalized[6:8]
+	}
+	parts := strings.Split(normalized, "-")
+	if len(parts) != 2 && len(parts) != 3 {
+		return "", false
+	}
+	year, err := strconv.Atoi(parts[0])
+	if err != nil || year < 1000 || year > 9999 {
+		return "", false
+	}
+	month, err := strconv.Atoi(parts[1])
+	if err != nil || month < 1 || month > 12 {
+		return "", false
+	}
+	if len(parts) == 2 {
+		return fmt.Sprintf("%04d-%02d", year, month), true
+	}
+	day, err := strconv.Atoi(parts[2])
+	if err != nil || day < 1 || day > 31 {
+		return "", false
+	}
+	return fmt.Sprintf("%04d-%02d-%02d", year, month, day), true
+}
+
+func allDigits(value string) bool {
+	for _, char := range value {
+		if char < '0' || char > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func checksum(values ...string) string {

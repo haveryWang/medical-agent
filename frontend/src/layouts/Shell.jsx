@@ -13,10 +13,10 @@ export default function Shell({ children }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const navItems = useMemo(() => [
-    { to: '/chat', label: '对话管理', icon: <MessageOutlined /> },
-    { to: '/knowledge', label: '知识库管理', icon: <DatabaseOutlined /> },
-    { to: '/review-notes', label: '复盘笔记', icon: <FormOutlined /> },
+    { to: '/chat', label: '智能问答', icon: <MessageOutlined /> },
     { to: '/policies', label: '政策文件库', icon: <FileSearchOutlined /> },
+    { to: '/review-notes', label: '复盘笔记', icon: <FormOutlined /> },
+    { to: '/knowledge', label: '知识库管理', icon: <DatabaseOutlined /> },
   ], []);
 
   return (

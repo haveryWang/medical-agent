@@ -673,6 +673,10 @@ a { color: inherit; }
   width: 180px;
 }
 
+.policy-keyword-input {
+  width: 220px;
+}
+
 .import-summary {
   margin: 12px 0;
   padding: 10px 12px;

@@ -1,4 +1,6 @@
-export const POLICY_CATEGORIES = ['国家医学中心', '科技创新', '医疗服务', '医保医药', '数智治理', '改革监管', '其他'];
+export const POLICY_CATEGORIES = ['国家医学中心', '科技创新', '医疗服务', '医保医药', '数智治理', '改革监管', '国际合作', '其他'];
+export const POLICY_FILTER_DEBOUNCE_MS = 400;
+export const POLICY_TEXT_ELLIPSIS = { rows: 3, expandable: true, symbol: '展开全部' };
 export const MAX_POLICY_FILE_BYTES = 15 * 1024 * 1024;
 export const POLICY_TEMPLATE_FILENAME = '政策文件库导入模板.xlsx';
 
@@ -23,6 +25,7 @@ export function buildPolicyListParams(filters = {}) {
   const params = {};
   if (filters.category) params.category = filters.category;
   if (filters.date) params.date = filters.date;
+  if (filters.keyword?.trim()) params.keyword = filters.keyword.trim();
   if (filters.page) params.page = filters.page;
   if (filters.pageSize) params.size = filters.pageSize;
   return params;

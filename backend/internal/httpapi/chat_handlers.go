@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"medical-agent/backend/internal/models"
+	"medical-agent/backend/internal/rag"
 	"medical-agent/backend/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -156,7 +157,8 @@ func (api *API) streamMessage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusInternalServerError, "retrieval_failed", err.Error())
 		return
 	}
-	assistant, err := api.store.CreateMessage(r.Context(), models.Message{ConversationID: conversationID, Role: "assistant", Status: "streaming", Citations: retrieval.Citations, PromptContext: retrieval.Context, ModelName: api.cfg.DeepSeekChatModel})
+	promptContext := rag.FormatPromptContext(rag.BuildPromptMessages(content, retrieval))
+	assistant, err := api.store.CreateMessage(r.Context(), models.Message{ConversationID: conversationID, Role: "assistant", Status: "streaming", Citations: retrieval.Citations, PromptContext: promptContext, ModelName: api.cfg.DeepSeekChatModel})
 	if err != nil {
 		writeError(w, r, http.StatusInternalServerError, "message_failed", err.Error())
 		return
@@ -180,6 +182,6 @@ func (api *API) streamMessage(w http.ResponseWriter, r *http.Request) {
 		sendSSE(w, flusher, "message.error", map[string]string{"code": "model_error", "message": err.Error(), "requestId": requestID(r)})
 		return
 	}
-	_ = api.store.UpdateMessage(context.Background(), assistant.ID, bson.M{"status": "completed", "content": answer, "durationMs": duration.Milliseconds(), "citations": retrieval.Citations, "promptContext": retrieval.Context})
+	_ = api.store.UpdateMessage(context.Background(), assistant.ID, bson.M{"status": "completed", "content": answer, "durationMs": duration.Milliseconds(), "citations": retrieval.Citations, "promptContext": promptContext})
 	sendSSE(w, flusher, "message.completed", map[string]any{"messageId": assistant.ID.Hex(), "durationMs": duration.Milliseconds(), "citationCount": len(retrieval.Citations)})
 }

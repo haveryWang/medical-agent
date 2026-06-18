@@ -71,19 +71,38 @@ func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primiti
 
 func (s *Service) StreamAnswer(ctx context.Context, question string, retrieval Retrieval, onDelta func(string) error) (string, time.Duration, error) {
 	start := time.Now()
-	system := "你是医院行政智策平台的智能问答助手。"
-	if strings.TrimSpace(retrieval.Context) != "" {
-		system += "必须优先根据提供的知识库上下文回答；如果上下文不足，明确说明无法从知识库确认，不要编造来源。\n\n知识库上下文：\n" + retrieval.Context
-	}
+	messages := BuildPromptMessages(question, retrieval)
 	var builder strings.Builder
-	err := s.deepseek.StreamChat(ctx, []deepseek.Message{
-		{Role: "system", Content: system},
-		{Role: "user", Content: question},
-	}, func(delta string) error {
+	err := s.deepseek.StreamChat(ctx, messages, func(delta string) error {
 		builder.WriteString(delta)
 		return onDelta(delta)
 	})
 	return builder.String(), time.Since(start), err
+}
+
+func BuildPromptMessages(question string, retrieval Retrieval) []deepseek.Message {
+	system := "你是医院行政智策平台的智能问答助手。"
+	if strings.TrimSpace(retrieval.Context) != "" {
+		system += "必须优先根据提供的知识库上下文回答；如果上下文不足，明确说明无法从知识库确认，不要编造来源。\n\n知识库上下文：\n" + retrieval.Context
+	}
+	return []deepseek.Message{
+		{Role: "system", Content: system},
+		{Role: "user", Content: question},
+	}
+}
+
+func FormatPromptContext(messages []deepseek.Message) string {
+	var builder strings.Builder
+	for index, message := range messages {
+		if index > 0 {
+			builder.WriteString("\n\n---\n\n")
+		}
+		builder.WriteString("Role: ")
+		builder.WriteString(message.Role)
+		builder.WriteString("\n")
+		builder.WriteString(message.Content)
+	}
+	return builder.String()
 }
 
 func fromChunks(chunks []models.Chunk, scores map[string]float64) Retrieval {

@@ -9,7 +9,7 @@ import (
 )
 
 func TestPolicyCategoriesAreFixed(t *testing.T) {
-	want := []string{"国家医学中心", "科技创新", "医疗服务", "医保医药", "数智治理", "改革监管", "其他"}
+	want := []string{"国家医学中心", "科技创新", "医疗服务", "医保医药", "数智治理", "改革监管", "国际合作", "其他"}
 	got := Categories()
 	if len(got) != len(want) {
 		t.Fatalf("categories = %#v, want %#v", got, want)
@@ -63,6 +63,49 @@ func TestParseExcelUsesAliasesAndSkipsInvalidRows(t *testing.T) {
 	joined := strings.Join(report.Errors, "\n")
 	if !strings.Contains(joined, "第 3 行") || !strings.Contains(joined, "第 4 行") {
 		t.Fatalf("errors = %#v, want row-level messages", report.Errors)
+	}
+}
+
+func TestParseExcelNormalizesExcelDateCells(t *testing.T) {
+	data := policyWorkbookWithExcelDate(t, "46179")
+
+	records, report, err := ParseExcel("政策文件.xlsx", data)
+	if err != nil {
+		t.Fatalf("ParseExcel error: %v", err)
+	}
+	if report.Imported != 1 || report.Skipped != 0 {
+		t.Fatalf("report = %#v, want imported 1 skipped 0", report)
+	}
+	if len(records) != 1 {
+		t.Fatalf("records = %#v, want one valid record", records)
+	}
+	if records[0].Date != "2026-06-06" {
+		t.Fatalf("date = %q, want 2026-06-06", records[0].Date)
+	}
+}
+
+func TestParseExcelNormalizesLooseDateText(t *testing.T) {
+	data := policyWorkbook(t, [][]string{
+		{"标题", "摘要", "解读", "日期", "分类标签"},
+		{"斜杠日期", "摘要", "解读", "2026/6/6", "国际合作"},
+		{"点分日期", "摘要", "解读", "2026.6.7", "国际合作"},
+		{"中文日期", "摘要", "解读", "2026年6月8日", "国际合作"},
+		{"紧凑日期", "摘要", "解读", "20260609", "国际合作"},
+		{"月份日期", "摘要", "解读", "2026/6", "国际合作"},
+	})
+
+	records, report, err := ParseExcel("政策文件.xlsx", data)
+	if err != nil {
+		t.Fatalf("ParseExcel error: %v", err)
+	}
+	if report.Imported != 5 || report.Skipped != 0 {
+		t.Fatalf("report = %#v, want imported 5 skipped 0", report)
+	}
+	want := []string{"2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09", "2026-06"}
+	for index, value := range want {
+		if records[index].Date != value {
+			t.Fatalf("record[%d].Date = %q, want %q", index, records[index].Date, value)
+		}
 	}
 }
 
@@ -124,6 +167,47 @@ func policyWorkbook(t *testing.T, rows [][]string) []byte {
 				t.Fatalf("set cell: %v", err)
 			}
 		}
+	}
+	var buf bytes.Buffer
+	if err := file.Write(&buf); err != nil {
+		t.Fatalf("write workbook: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func policyWorkbookWithExcelDate(t *testing.T, excelDate string) []byte {
+	t.Helper()
+	file := excelize.NewFile()
+	sheet := file.GetSheetName(0)
+	headers := []string{"标题", "摘要", "解读", "日期", "分类标签"}
+	values := []string{"国际合作政策", "国际合作政策摘要", "国际合作政策解读", excelDate, "国际合作"}
+	for colIndex, value := range headers {
+		cell, err := excelize.CoordinatesToCellName(colIndex+1, 1)
+		if err != nil {
+			t.Fatalf("header cell name: %v", err)
+		}
+		if err := file.SetCellValue(sheet, cell, value); err != nil {
+			t.Fatalf("set header cell: %v", err)
+		}
+	}
+	for colIndex, value := range values {
+		cell, err := excelize.CoordinatesToCellName(colIndex+1, 2)
+		if err != nil {
+			t.Fatalf("value cell name: %v", err)
+		}
+		if err := file.SetCellValue(sheet, cell, value); err != nil {
+			t.Fatalf("set value cell: %v", err)
+		}
+	}
+	if err := file.SetCellFloat(sheet, "D2", 46179, 0, 64); err != nil {
+		t.Fatalf("set excel date value: %v", err)
+	}
+	style, err := file.NewStyle(&excelize.Style{NumFmt: 14})
+	if err != nil {
+		t.Fatalf("date style: %v", err)
+	}
+	if err := file.SetCellStyle(sheet, "D2", "D2", style); err != nil {
+		t.Fatalf("set date style: %v", err)
 	}
 	var buf bytes.Buffer
 	if err := file.Write(&buf); err != nil {

@@ -79,11 +79,7 @@ func (s *MongoStore) ListPolicyDocuments(ctx context.Context, filter PolicyFilte
 		query["date"] = bson.M{"$regex": "^" + regexp.QuoteMeta(filter.Date)}
 	}
 	if filter.Keyword != "" {
-		query["$or"] = []bson.M{
-			{"title": bson.M{"$regex": filter.Keyword, "$options": "i"}},
-			{"summary": bson.M{"$regex": filter.Keyword, "$options": "i"}},
-			{"interpretation": bson.M{"$regex": filter.Keyword, "$options": "i"}},
-		}
+		query["title"] = bson.M{"$regex": regexp.QuoteMeta(filter.Keyword), "$options": "i"}
 	}
 	page := filter.Page
 	if page <= 0 {

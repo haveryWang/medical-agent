@@ -122,17 +122,17 @@ function KnowledgeEditorModal({ editing, open, onCancel, onSave }) {
     >
       <Form form={form} layout="vertical" requiredMark={false}>
         <Form.Item name="name" label="知识库名称" rules={[{ required: true, message: '请输入知识库名称' }]}>
-          <Input placeholder="例如：内分泌科诊疗规范" maxLength={80} showCount />
+          <Input placeholder="例如：医保报销制度库" maxLength={80} showCount />
         </Form.Item>
         <Form.Item name="description" label="描述">
-          <Input.TextArea placeholder="说明知识库覆盖的文档范围和使用场景" autoSize={{ minRows: 3, maxRows: 5 }} maxLength={300} showCount />
+          <Input.TextArea placeholder="说明覆盖的行政制度、政策文件及适用场景" autoSize={{ minRows: 3, maxRows: 5 }} maxLength={300} showCount />
         </Form.Item>
         <div className="form-grid">
           <Form.Item name="scenario" label="场景">
-            <Input placeholder="临床诊疗" />
+            <Input placeholder="政策解读" />
           </Form.Item>
           <Form.Item name="department" label="所属部门">
-            <Input placeholder="医务部" />
+            <Input placeholder="院办公室" />
           </Form.Item>
           <Form.Item name="retrievalTopK" label="检索 TopK">
             <InputNumber min={1} max={50} precision={0} className="full-width" />

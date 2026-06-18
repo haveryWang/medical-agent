@@ -39,7 +39,7 @@ export function useChatWorkspace() {
   const selectedKnowledgeBaseNames = knowledgeBaseNames(visibleSelectedKnowledgeBaseIds, activeKnowledgeBaseMap);
   const paneHint = selectedKnowledgeBaseNames
     ? `消息将携带知识库：${selectedKnowledgeBaseNames}`
-    : '未选择知识库，本次消息不走检索增强';
+    : '未选择知识库，本次消息不使用检索增强';
 
   useEffect(() => {
     let mounted = true;
