@@ -29,6 +29,11 @@ type Retrieval struct {
 	Context   string
 }
 
+type retrievalScope struct {
+	ID   primitive.ObjectID
+	TopK int
+}
+
 func New(cfg config.Config, store *store.MongoStore, qwen *qwen.Client, vector *vector.Client, deepseek *deepseek.Client) *Service {
 	return &Service{cfg: cfg, store: store, qwen: qwen, vector: vector, deepseek: deepseek}
 }
@@ -41,13 +46,13 @@ func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primiti
 	if err != nil {
 		return Retrieval{}, err
 	}
-	kbHex := make([]string, 0, len(kbIDs))
-	for _, id := range kbIDs {
-		kbHex = append(kbHex, id.Hex())
+	scopes, err := s.retrievalScopes(ctx, kbIDs)
+	if err != nil {
+		return Retrieval{}, err
 	}
-	results, err := s.vector.Search(ctx, queryVectors[0], kbHex, s.cfg.RetrievalTopK)
+	results, err := s.searchVectorScopes(ctx, queryVectors[0], scopes)
 	if err != nil || len(results) == 0 {
-		chunks, fallbackErr := s.store.SearchChunks(ctx, kbIDs, int64(s.cfg.RetrievalTopK))
+		chunks, fallbackErr := s.searchChunkScopes(ctx, scopes)
 		if fallbackErr != nil {
 			if err != nil {
 				return Retrieval{}, err
@@ -67,6 +72,60 @@ func (s *Service) Retrieve(ctx context.Context, question string, kbIDs []primiti
 		return Retrieval{}, err
 	}
 	return fromChunks(chunks, scores), nil
+}
+
+func (s *Service) retrievalScopes(ctx context.Context, kbIDs []primitive.ObjectID) ([]retrievalScope, error) {
+	if s.store == nil {
+		return retrievalScopesFromKnowledgeBases(kbIDs, nil, s.cfg.RetrievalTopK), nil
+	}
+	kbs := make(map[primitive.ObjectID]models.KnowledgeBase, len(kbIDs))
+	for _, id := range kbIDs {
+		kb, err := s.store.GetKnowledgeBase(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		kbs[id] = kb
+	}
+	return retrievalScopesFromKnowledgeBases(kbIDs, kbs, s.cfg.RetrievalTopK), nil
+}
+
+func retrievalScopesFromKnowledgeBases(kbIDs []primitive.ObjectID, kbs map[primitive.ObjectID]models.KnowledgeBase, fallbackTopK int) []retrievalScope {
+	if fallbackTopK <= 0 {
+		fallbackTopK = 5
+	}
+	scopes := make([]retrievalScope, 0, len(kbIDs))
+	for _, id := range kbIDs {
+		topK := fallbackTopK
+		if kb, ok := kbs[id]; ok && kb.RetrievalTopK > 0 {
+			topK = kb.RetrievalTopK
+		}
+		scopes = append(scopes, retrievalScope{ID: id, TopK: topK})
+	}
+	return scopes
+}
+
+func (s *Service) searchVectorScopes(ctx context.Context, queryVector []float64, scopes []retrievalScope) ([]vector.SearchResult, error) {
+	results := make([]vector.SearchResult, 0)
+	for _, scope := range scopes {
+		scopeResults, err := s.vector.Search(ctx, queryVector, []string{scope.ID.Hex()}, scope.TopK)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, scopeResults...)
+	}
+	return results, nil
+}
+
+func (s *Service) searchChunkScopes(ctx context.Context, scopes []retrievalScope) ([]models.Chunk, error) {
+	chunks := make([]models.Chunk, 0)
+	for _, scope := range scopes {
+		scopeChunks, err := s.store.SearchChunks(ctx, []primitive.ObjectID{scope.ID}, int64(scope.TopK))
+		if err != nil {
+			return nil, err
+		}
+		chunks = append(chunks, scopeChunks...)
+	}
+	return chunks, nil
 }
 
 func (s *Service) StreamAnswer(ctx context.Context, question string, retrieval Retrieval, onDelta func(string) error) (string, time.Duration, error) {
